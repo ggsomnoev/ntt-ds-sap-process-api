@@ -1,0 +1,20 @@
+name: uniqueProcessName
+
+params:
+  - name: parameterName
+    mandatory: true
+    description: description of the parameter
+    defvalue: ""
+
+tasks:
+  - name: parallel_local_task
+    class: localCmd
+    parameters:
+      command: "{{.command}}"  
+
+  - name: sync_local_task
+    class: localCmd
+    parameters:
+      command: "{{.command}}"
+    waitfor:
+      - parallel_local_task
