@@ -13,6 +13,7 @@ require (
 	github.com/maxbrunsfeld/counterfeiter/v6 v6.11.2
 	github.com/onsi/ginkgo/v2 v2.20.1
 	github.com/onsi/gomega v1.36.1
+	github.com/rabbitmq/amqp091-go v1.10.0
 	github.com/sirupsen/logrus v1.9.3
 	gopkg.in/yaml.v3 v3.0.1
 )

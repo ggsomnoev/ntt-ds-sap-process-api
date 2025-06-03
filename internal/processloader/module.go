@@ -8,7 +8,7 @@ import (
 	"github.com/ggsomnoev/ntt-ds-sap-process-api/internal/processloader/service"
 	"github.com/ggsomnoev/ntt-ds-sap-process-api/internal/processloader/service/reader"
 	"github.com/ggsomnoev/ntt-ds-sap-process-api/internal/processloader/service/sender"
-	"github.com/ggsomnoev/ntt-ds-sap-process-api/internal/processloader/service/validator"
+	"github.com/ggsomnoev/ntt-ds-sap-process-api/internal/validator"
 	"github.com/ggsomnoev/ntt-ds-sap-process-api/internal/processloader/store"
 	"github.com/jackc/pgx/v5/pgxpool"
 )

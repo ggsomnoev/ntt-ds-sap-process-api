@@ -24,7 +24,7 @@ func (pv *ProcessValidator) Validate(proc model.ProcessDefinition) error {
 		if strings.TrimSpace(task.Name) == "" {
 			return errors.New("task name must not be empty")
 		}
-		if strings.TrimSpace(task.Class) == "" {
+		if strings.TrimSpace(string(task.Class)) == "" {
 			return fmt.Errorf("task '%s' class must not be empty", task.Name)
 		}
 		if _, exists := taskNames[task.Name]; exists {

@@ -1,17 +1,32 @@
 services:
-  # producer:
-  #   container_name: process-config-producer
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile.producer
-  #   depends_on:
-  #     processdb:
-  #       condition: service_healthy    
-  #   ports:
-  #     - "8080:8080"
-  #   env_file:
-  #     - .env
+  producer:
+    container_name: process-config-producer
+    build:
+      context: .
+      dockerfile: Dockerfile.producer
+    depends_on:
+      rabbitmq:
+        condition: service_healthy    
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
 
+  configloader:
+    container_name: process-config-loader
+    build:
+      context: .
+      dockerfile: Dockerfile.configloader
+    depends_on:
+      processdb:
+        condition: service_healthy
+    ports:
+      - "8082:8080"
+    env_file:
+      - .env
+    volumes:
+      - ./process_configs:/app/process_configs
+  
   # consumer:
   #   container_name: process-config-consumer
   #   build:
@@ -24,22 +39,21 @@ services:
   #     - "8081:8080"
   #   env_file:
   #     - .env
-
-  configloader:
-    container_name: process-config-loader
-    build:
-      context: .
-      dockerfile: Dockerfile.configloader
-    depends_on:
-      processdb:
-        condition: service_healthy   
+  rabbitmq:
+    image: rabbitmq:4.1.0-management
+    container_name: rabbitmq
     ports:
-      - "8082:8080"
-    env_file:
-      - .env
-    volumes:
-      - ./process_configs:/app/process_configs
-  
+      - "5672:5672"     
+      - "15672:15672"   # HTTP management UI
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_running"]
+      interval: 10s
+      timeout: 5s
+      retries: 5  
+
   processdb:
     image: postgres:15.7
     container_name: processdb

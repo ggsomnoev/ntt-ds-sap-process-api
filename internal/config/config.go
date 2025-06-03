@@ -9,6 +9,7 @@ import (
 )
 
 type Config struct {
+	AppEnv        string
 	APIPort       string
 	WebAPIAddress string
 	ProcessCfgDir string
@@ -19,12 +20,19 @@ type Config struct {
 	DBHealthCheck     time.Duration
 	DBMinConns        int32
 	DBMaxConns        int32
+
+	RabbitMQConnURL  string
+	RabbitMQQueue    string
+	RabbitMQCAFile   string
+	RabbitMQCertFile string
+	RabbitMQKeyFile  string
 }
 
 func Load() (*Config, error) {
 	return &Config{
+		AppEnv:            getEnv("APP_ENV", "local"),
 		APIPort:           getEnv("API_PORT", "8080"),
-		WebAPIAddress:     getEnv("WEB_API_ADDRESS", "http://localhost:8080"),
+		WebAPIAddress:     getEnv("WEB_API_ADDRESS", "http://producer:8080"),
 		ProcessCfgDir:     getEnv("PROCESS_CFG_DIR", ""),
 		DBConnectionURL:   getEnv("DB_CONNECTION_URL", "postgres://user:pass@processdb:5432/processdb"),
 		DBMaxConnLifetime: getDuration("DB_MAX_CONN_LIFETIME", 30*time.Minute),
@@ -32,6 +40,11 @@ func Load() (*Config, error) {
 		DBHealthCheck:     getDuration("DB_HEALTH_CHECK_PERIOD", 1*time.Minute),
 		DBMinConns:        getInt32("DB_MIN_CONNS", 1),
 		DBMaxConns:        getInt32("DB_MAX_CONNS", 5),
+		RabbitMQConnURL:   getEnv("RABBITMQ_CONN_URL", ""),
+		RabbitMQQueue:     getEnv("RABBITMQ_QUEUE", ""),
+		RabbitMQCAFile:    getEnv("RABBITMQ_CA_FILE", ""),
+		RabbitMQCertFile:  getEnv("RABBITMQ_CERT_FILE", ""),
+		RabbitMQKeyFile:   getEnv("RABBITMQ_KEY_FILE", ""),
 	}, nil
 }
 

@@ -8,7 +8,7 @@ import (
 	"github.com/ggsomnoev/ntt-ds-sap-process-api/internal/lifecycle"
 )
 
-const pollInterval = 15 * time.Second
+const pollInterval = 60 * time.Second
 
 type Service interface {
 	TryProcessConfigs(ctx context.Context) error

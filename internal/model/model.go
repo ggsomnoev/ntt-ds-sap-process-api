@@ -1,5 +1,18 @@
 package model
 
+import (
+	"encoding/json"
+	"fmt"
+	"strings"
+
+	"github.com/google/uuid"
+)
+
+type Message struct {
+	UUID uuid.UUID `json:"uuid"`
+	ProcessDefinition
+}
+
 type ProcessDefinition struct {
 	Name   string  `yaml:"name" json:"name"`
 	Params []Param `yaml:"params" json:"params"`
@@ -15,7 +28,37 @@ type Param struct {
 
 type Task struct {
 	Name       string            `yaml:"name" json:"name"`
-	Class      string            `yaml:"class" json:"class"`
+	Class      ClassType         `yaml:"class" json:"class"`
 	Parameters map[string]string `yaml:"parameters" json:"parameters"`
 	WaitFor    []string          `yaml:"waitfor,omitempty" json:"waitfor,omitempty"`
+}
+
+type ClassType string
+
+const (
+	LocalCmd ClassType = "localCmd"
+	SshCmd   ClassType = "sshCmd"
+	ScpCmd   ClassType = "scpCmd"
+)
+
+var validClassTypes = map[string]ClassType{
+	"localcmd": LocalCmd,
+	"sshcmd":   SshCmd,
+	"scpcmd":   ScpCmd,
+}
+
+func (c *ClassType) UnmarshalJSON(data []byte) error {
+	var raw string
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return fmt.Errorf("invalid class type: %w", err)
+	}
+
+	normalized := strings.ToLower(raw)
+	val, ok := validClassTypes[normalized]
+	if !ok {
+		return fmt.Errorf("unsupported class type: %s", raw)
+	}
+
+	*c = val
+	return nil
 }

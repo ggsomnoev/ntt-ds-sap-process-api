@@ -7,9 +7,9 @@ import (
 	"github.com/ggsomnoev/ntt-ds-sap-process-api/internal/healthcheck"
 	"github.com/ggsomnoev/ntt-ds-sap-process-api/internal/healthcheck/service"
 	"github.com/ggsomnoev/ntt-ds-sap-process-api/internal/healthcheck/service/component"
+	"github.com/ggsomnoev/ntt-ds-sap-process-api/internal/processproducer"
 	"github.com/ggsomnoev/ntt-ds-sap-process-api/internal/lifecycle"
-	"github.com/ggsomnoev/ntt-ds-sap-process-api/internal/pg"
-	"github.com/ggsomnoev/ntt-ds-sap-process-api/internal/processloader"
+	"github.com/ggsomnoev/ntt-ds-sap-process-api/internal/rabbitmq"
 	"github.com/ggsomnoev/ntt-ds-sap-process-api/internal/webapi"
 )
 
@@ -22,25 +22,25 @@ func main() {
 		panic(fmt.Errorf("failed reading configuration: %w", err))
 	}
 
-	dbCfg := pg.PoolConfig{
-		MinConns:          cfg.DBMinConns,
-		MaxConns:          cfg.DBMaxConns,
-		MaxConnLifetime:   cfg.DBMaxConnLifetime,
-		MaxConnIdleTime:   cfg.DBMaxConnIdleTime,
-		HealthCheckPeriod: cfg.DBHealthCheck,
-	}
-	pool, err := pg.InitPool(appCtx, cfg.DBConnectionURL, dbCfg)
-	if err != nil {
-		panic(fmt.Errorf("failed initializing DB pool: %w", err))
-	}
-	defer pool.Close()
-
 	srv := webapi.NewServer(appCtx)
 
-	processloader.Process(procSpawnFn, appCtx, cfg.ProcessCfgDir, pool, cfg.WebAPIAddress)
+	var tlsConfig *rabbitmq.TLSConfig
+	if cfg.AppEnv != "local" {
+		tlsConfig = &rabbitmq.TLSConfig{
+			CAFile:   cfg.RabbitMQCAFile,
+			CertFile: cfg.RabbitMQCertFile,
+			KeyFile:  cfg.RabbitMQKeyFile,
+		}
+	}
+	rmqClient, err := rabbitmq.NewClient(cfg.RabbitMQConnURL, cfg.RabbitMQQueue, tlsConfig)
+	if err != nil {
+		panic(fmt.Errorf("failed to connect to RabbitMQ: %w", err))
+	}
 
-	dbComp := component.NewDBChecker(pool)
-	healthCheckService := service.NewHealthCheckService(dbComp)
+	producer.Process(procSpawnFn, appCtx, srv, rmqClient)
+
+	rmqConn := component.NewRabbitMQChecker(rmqClient.Connection())
+	healthCheckService := service.NewHealthCheckService(rmqConn)
 	healthcheck.Process(procSpawnFn, appCtx, srv, healthCheckService)
 
 	webapi.Start(procSpawnFn, srv, cfg.APIPort)
