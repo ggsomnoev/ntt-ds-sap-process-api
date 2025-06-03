@@ -10,6 +10,7 @@ import (
 
 type Config struct {
 	APIPort       string
+	WebAPIAddress string
 	ProcessCfgDir string
 
 	DBConnectionURL   string
@@ -23,6 +24,7 @@ type Config struct {
 func Load() (*Config, error) {
 	return &Config{
 		APIPort:           getEnv("API_PORT", "8080"),
+		WebAPIAddress:     getEnv("WEB_API_ADDRESS", "http://localhost:8080"),
 		ProcessCfgDir:     getEnv("PROCESS_CFG_DIR", ""),
 		DBConnectionURL:   getEnv("DB_CONNECTION_URL", "postgres://user:pass@processdb:5432/processdb"),
 		DBMaxConnLifetime: getDuration("DB_MAX_CONN_LIFETIME", 30*time.Minute),

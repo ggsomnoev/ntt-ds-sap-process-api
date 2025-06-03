@@ -2,22 +2,23 @@ package process
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"time"
 
 	"github.com/ggsomnoev/ntt-ds-sap-process-api/internal/lifecycle"
 )
 
-const pollInterval = 15 * time.Second
+const pollInterval = 10 * time.Second
 
 type Service interface {
-	TryProcessConfigs() error
+	Status() (map[string]string, bool)
 }
 
+// The LRP and K8s liveness probe will handle app restart. Not really needed but nice to have for stuck services.
 func Process(
 	procSpawnFn lifecycle.ProcessSpawnFunc,
 	ctx context.Context,
-	processLoader Service,
+	healthChecker Service,
 ) {
 	procSpawnFn(func(ctx context.Context) error {
 		ticker := time.NewTicker(pollInterval)
@@ -28,11 +29,11 @@ func Process(
 			case <-ctx.Done():
 				return nil
 			case <-ticker.C:
-				err := processLoader.TryProcessConfigs()
-				if err != nil {
-					return fmt.Errorf("failed to process config files: %w", err)
+				_, healthy := healthChecker.Status()
+				if !healthy {
+					return errors.New("health check failed; triggering shutdown")
 				}
 			}
 		}
-	}, "Process Config Loader")
+	}, "Health Checker")
 }

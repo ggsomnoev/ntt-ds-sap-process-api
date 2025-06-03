@@ -4,9 +4,11 @@ import (
 	"fmt"
 
 	"github.com/ggsomnoev/ntt-ds-sap-process-api/internal/config"
+	"github.com/ggsomnoev/ntt-ds-sap-process-api/internal/healthcheck"
 	"github.com/ggsomnoev/ntt-ds-sap-process-api/internal/lifecycle"
 	"github.com/ggsomnoev/ntt-ds-sap-process-api/internal/pg"
 	"github.com/ggsomnoev/ntt-ds-sap-process-api/internal/processloader"
+	"github.com/ggsomnoev/ntt-ds-sap-process-api/internal/webapi"
 )
 
 func main() {
@@ -31,7 +33,13 @@ func main() {
 	}
 	defer pool.Close()
 
-	processloader.Process(procSpawnFn, appCtx, cfg.ProcessCfgDir, pool)
+	srv := webapi.NewServer(appCtx)
+
+	processloader.Process(procSpawnFn, appCtx, cfg.ProcessCfgDir, pool, cfg.WebAPIAddress)
+
+	healthcheck.Process(procSpawnFn, appCtx, srv, pool)
+
+	webapi.Start(procSpawnFn, srv, cfg.APIPort)
 
 	appController.Wait()
 }
