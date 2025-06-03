@@ -203,5 +203,6 @@ var _ = Describe("Service", func() {
 			})
 		})
 
+		// TODO: cover mulptiple config files
 	})
 })
