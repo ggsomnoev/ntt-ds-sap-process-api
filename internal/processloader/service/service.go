@@ -9,6 +9,7 @@ import (
 	"github.com/ggsomnoev/ntt-ds-sap-process-api/internal/model"
 )
 
+//counterfeiter:generate . Store
 type Store interface {
 	AddProcessedFile(context.Context, string) error
 	MarkCompleted(context.Context, string) error
@@ -16,15 +17,18 @@ type Store interface {
 	RunInAtomically(context.Context, func(ctx context.Context) error) error
 }
 
+//counterfeiter:generate . Reader
 type Reader interface {
 	ParseConfigFile(string) (model.ProcessDefinition, error)
 	ReadYAMLFiles() ([]string, error)
 }
 
+//counterfeiter:generate . Validator
 type Validator interface {
 	Validate(model.ProcessDefinition) error
 }
 
+//counterfeiter:generate . Sender
 type Sender interface {
 	Send(model.ProcessDefinition) error
 }
@@ -47,7 +51,7 @@ func NewService(store Store, reader Reader, validator Validator, sender Sender) 
 
 // TryProcessConfigs scans the directory for YAML files, checks whether they have already been processed,
 // and if not, validates and registers them in the store. Successfully handled files are marked as completed.
-func (s *Service) TryProcessConfigs() error {
+func (s *Service) TryProcessConfigs(ctx context.Context) error {
 	files, err := s.reader.ReadYAMLFiles()
 	if err != nil {
 		return fmt.Errorf("failed to read process config files: %w", err)
@@ -56,7 +60,7 @@ func (s *Service) TryProcessConfigs() error {
 	for _, path := range files {
 		filename := filepath.Base(path)
 
-		err := s.store.RunInAtomically(context.Background(), func(ctx context.Context) error {
+		err := s.store.RunInAtomically(ctx, func(ctx context.Context) error {
 			exists, err := s.store.FileExists(ctx, filename)
 			if err != nil {
 				return fmt.Errorf("failed to check if file exists: %w", err)

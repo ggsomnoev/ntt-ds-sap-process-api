@@ -11,7 +11,7 @@ import (
 const pollInterval = 15 * time.Second
 
 type Service interface {
-	TryProcessConfigs() error
+	TryProcessConfigs(ctx context.Context) error
 }
 
 func Process(
@@ -28,7 +28,7 @@ func Process(
 			case <-ctx.Done():
 				return nil
 			case <-ticker.C:
-				err := processLoader.TryProcessConfigs()
+				err := processLoader.TryProcessConfigs(ctx)
 				if err != nil {
 					return fmt.Errorf("failed to process config files: %w", err)
 				}

@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/ggsomnoev/ntt-ds-sap-process-api/internal/logger"
 	"github.com/ggsomnoev/ntt-ds-sap-process-api/internal/model"
 )
 
@@ -42,7 +43,11 @@ func (s *HTTPProcessSender) Send(def model.ProcessDefinition) error {
 	if err != nil {
 		return fmt.Errorf("failed to send request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			logger.GetLogger().Errorf("could not close response body: %v", err)
+		}
+	}()
 
 	if resp.StatusCode >= 300 {
 		return fmt.Errorf("API returned status %d", resp.StatusCode)

@@ -21,7 +21,7 @@ func NewStore(pool *pgxpool.Pool) *Store {
 	return &Store{pool: pool}
 }
 
-func (s *Store) AddProcessedFile(ctx context.Context, fileName string) error {
+func (s *Store) AddProcessedFile(ctx context.Context, filename string) error {
 	tx, err := txctx.GetTx(ctx)
 	if err != nil {
 		return err
@@ -31,22 +31,22 @@ func (s *Store) AddProcessedFile(ctx context.Context, fileName string) error {
 		INSERT INTO %s (filename) VALUES ($1)
 	`, ProcessedFilesTable)
 
-	_, err = tx.Exec(ctx, query, fileName)
+	_, err = tx.Exec(ctx, query, filename)
 	return err
 }
 
-func (s *Store) MarkCompleted(ctx context.Context, fileName string) error {
+func (s *Store) MarkCompleted(ctx context.Context, filename string) error {
 	tx, err := txctx.GetTx(ctx)
 	if err != nil {
 		return err
 	}
 
 	query := fmt.Sprintf(`UPDATE %s SET completed_at = $1 WHERE filename = $2`, ProcessedFilesTable)
-	_, err = tx.Exec(ctx, query, time.Now().UTC(), fileName)
+	_, err = tx.Exec(ctx, query, time.Now().UTC(), filename)
 	return err
 }
 
-func (s *Store) FileExists(ctx context.Context, fileName string) (bool, error) {
+func (s *Store) FileExists(ctx context.Context, filename string) (bool, error) {
 	tx, err := txctx.GetTx(ctx)
 	if err != nil {
 		return false, err
@@ -54,7 +54,7 @@ func (s *Store) FileExists(ctx context.Context, fileName string) (bool, error) {
 
 	query := fmt.Sprintf(`SELECT EXISTS (SELECT 1 FROM %s WHERE filename = $1)`, ProcessedFilesTable)
 	var exists bool
-	err = tx.QueryRow(ctx, query, fileName).Scan(&exists)
+	err = tx.QueryRow(ctx, query, filename).Scan(&exists)
 	if err != nil {
 		return false, fmt.Errorf("query failed: %w", err)
 	}

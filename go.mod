@@ -5,11 +5,14 @@ go 1.23.0
 toolchain go1.23.9
 
 require (
+	github.com/caarlos0/env/v6 v6.10.1
 	github.com/golang-migrate/migrate/v4 v4.18.3
 	github.com/jackc/pgx/v5 v5.5.4
 	github.com/joho/godotenv v1.5.1
 	github.com/labstack/echo/v4 v4.13.4
 	github.com/maxbrunsfeld/counterfeiter/v6 v6.11.2
+	github.com/onsi/ginkgo/v2 v2.20.1
+	github.com/onsi/gomega v1.36.1
 	github.com/sirupsen/logrus v1.9.3
 	gopkg.in/yaml.v3 v3.0.1
 )
@@ -70,6 +73,7 @@ require (
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-sql-driver/mysql v1.5.0 // indirect
 	github.com/go-stack/stack v1.8.0 // indirect
+	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
 	github.com/goccy/go-json v0.9.11 // indirect
 	github.com/gocql/gocql v0.0.0-20210515062232-b7ef815b4556 // indirect
 	github.com/godbus/dbus v0.0.0-20190726142602-4481cbc300e2 // indirect
@@ -80,8 +84,10 @@ require (
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/flatbuffers v2.0.8+incompatible // indirect
+	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/google/go-github/v39 v39.2.0 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
+	github.com/google/pprof v0.0.0-20240827171923-fa2c70bbbfe5 // indirect
 	github.com/google/s2a-go v0.1.7 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.2 // indirect
@@ -169,7 +175,7 @@ require (
 	google.golang.org/genproto/googleapis/api v0.0.0-20240513163218-0867130af1f8 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240513163218-0867130af1f8 // indirect
 	google.golang.org/grpc v1.64.1 // indirect
-	google.golang.org/protobuf v1.34.2 // indirect
+	google.golang.org/protobuf v1.35.1 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	lukechampine.com/uint128 v1.2.0 // indirect
 	modernc.org/b v1.0.0 // indirect
