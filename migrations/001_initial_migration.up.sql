@@ -7,4 +7,11 @@ CREATE TABLE IF NOT EXISTS processed_files (
     completed_at TIMESTAMPTZ
 );
 
+CREATE TABLE IF NOT EXISTS process_events (    
+    uuid UUID PRIMARY KEY,
+    payload JSONB NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    completed_at TIMESTAMPTZ
+);
+
 COMMIT;
