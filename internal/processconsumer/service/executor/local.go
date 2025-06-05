@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"os/exec"
+	"runtime"
 	"strings"
 
 	"github.com/ggsomnoev/ntt-ds-sap-process-api/internal/logger"
@@ -26,8 +27,12 @@ func (le *LocalCmdExecutor) Run(ctx context.Context, task model.Task) error {
 
 	logger.GetLogger().Infof("Executing local command: %q", cmdStr)
 
-	// Use 'sh -c' to support shell features like pipes, redirects, etc.
-	cmd := exec.CommandContext(ctx, "sh", "-c", cmdStr)
+	var cmd *exec.Cmd
+	if runtime.GOOS == "windows" {
+		cmd = exec.CommandContext(ctx, "cmd", "/C", cmdStr)
+	} else {
+		cmd = exec.CommandContext(ctx, "sh", "-c", cmdStr)
+	}
 
 	var stdoutBuf, stderrBuf bytes.Buffer
 	cmd.Stdout = &stdoutBuf
