@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/ggsomnoev/ntt-ds-sap-process-api/internal/model"
 	"github.com/ggsomnoev/ntt-ds-sap-process-api/internal/processloader/service/reader"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -78,12 +79,11 @@ tasks:
 			It("parses the file into a ProcessDefinition", func() {
 				def, err := readerSvc.ParseConfigFile(filePath)
 				Expect(err).NotTo(HaveOccurred())
-
 				Expect(def.Name).To(Equal("sample-process"))
 				Expect(def.Params).To(HaveLen(1))
 				Expect(def.Params[0].Name).To(Equal("p1"))
 				Expect(def.Tasks).To(HaveLen(1))
-				Expect(def.Tasks[0].Class).To(Equal("C"))
+				Expect(def.Tasks[0].Class).To(Equal(model.ClassType("C")))
 			})
 		})
 
@@ -106,4 +106,49 @@ tasks:
 			})
 		})
 	})
+
+	Describe("ApplyTemplatingToTasks", func() {
+		It("applies template values to task parameters", func() {
+			tasks := []model.Task{
+				{
+					Name:  "task1",
+					Class: "localCmd",
+					Parameters: map[string]string{
+						"command": "echo {{.msg}}",
+						"user":    "{{.username}}",
+					},
+				},
+			}
+
+			inputs := map[string]string{
+				"msg":      "hello",
+				"username": "admin",
+			}
+
+			rendered, err := readerSvc.ApplyTemplatingToTasks(tasks, inputs)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rendered).To(HaveLen(1))
+
+			task := rendered[0]
+			Expect(task.Parameters["command"]).To(Equal("echo hello"))
+			Expect(task.Parameters["user"]).To(Equal("admin"))
+		})
+
+		It("returns an error if the template is invalid", func() {
+			tasks := []model.Task{
+				{
+					Name:  "badTemplateTask",
+					Class: "localCmd",
+					Parameters: map[string]string{
+						"cmd": "{{.msg", // malformed template
+					},
+				},
+			}
+
+			inputs := map[string]string{"msg": "hi"}
+			_, err := readerSvc.ApplyTemplatingToTasks(tasks, inputs)
+			Expect(err).To(MatchError(ContainSubstring("failed to parse template")))
+		})
+	})
+
 })

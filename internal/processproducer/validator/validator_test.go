@@ -5,7 +5,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/ggsomnoev/ntt-ds-sap-process-api/internal/model"
-	"github.com/ggsomnoev/ntt-ds-sap-process-api/internal/validator"
+	"github.com/ggsomnoev/ntt-ds-sap-process-api/internal/processproducer/validator"
 )
 
 var _ = Describe("ProcessValidator", func() {

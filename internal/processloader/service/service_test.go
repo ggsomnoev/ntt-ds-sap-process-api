@@ -7,74 +7,62 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/ggsomnoev/ntt-ds-sap-process-api/internal/model"
 	"github.com/ggsomnoev/ntt-ds-sap-process-api/internal/processloader/service"
 	"github.com/ggsomnoev/ntt-ds-sap-process-api/internal/processloader/service/servicefakes"
 )
 
 var (
-	ErrRead         = errors.New("read error")
-	ErrParse        = errors.New("parse error")
-	ErrValidation   = errors.New("invalid process")
-	ErrSend         = errors.New("send failure")
-	ErrWrite        = errors.New("db write failed")
-	ErrMarkComplete = errors.New("mark complete error")
+	ErrRead      = errors.New("read error")
+	ErrGetName   = errors.New("get name error")
+	ErrStoreMeta = errors.New("store meta error")
 )
 
 var _ = Describe("Service", func() {
 	When("created", func() {
-		It("exists", func() {
-			Expect(service.NewService(nil, nil, nil, nil)).NotTo(BeNil())
+		It("should instantiate the service", func() {
+			Expect(service.NewService(nil, nil)).NotTo(BeNil())
 		})
 	})
 
-	var _ = Describe("instance", Serial, func() {
+	Describe("IndexProcessDefinitions", Serial, func() {
 		var (
-			svc           *service.Service
-			ctx           context.Context
-			errAction     error
-			fakeStore     *servicefakes.FakeStore
-			fakeReader    *servicefakes.FakeReader
-			fakeValidator *servicefakes.FakeValidator
-			fakeSender    *servicefakes.FakeSender
+			svc        *service.Service
+			ctx        context.Context
+			errAction  error
+			fakeStore  *servicefakes.FakeStore
+			fakeReader *servicefakes.FakeReader
 		)
 
 		BeforeEach(func() {
 			ctx = context.Background()
 			fakeStore = &servicefakes.FakeStore{}
 			fakeReader = &servicefakes.FakeReader{}
-			fakeValidator = &servicefakes.FakeValidator{}
-			fakeSender = &servicefakes.FakeSender{}
 
-			svc = service.NewService(fakeStore, fakeReader, fakeValidator, fakeSender)
-
-			fakeStore.RunInAtomicallyStub = func(_ context.Context, fn func(context.Context) error) error {
-				return fn(ctx)
-			}
+			svc = service.NewService(fakeStore, fakeReader)
 
 			fakeReader.ReadYAMLFilesReturns([]string{"dir/process.yaml"}, nil)
-			fakeStore.FileExistsReturns(false, nil)
-			fakeStore.AddProcessedFileReturns(nil)
-			fakeReader.ParseConfigFileReturns(model.ProcessDefinition{Name: "test"}, nil)
-			fakeValidator.ValidateReturns(nil)
-			fakeSender.SendReturns(nil)
-			fakeStore.MarkCompletedReturns(nil)
+			fakeReader.GetProcessNameFromFileReturns("test-process", nil)
+			fakeStore.SaveProcessDefinitionMetaReturns(nil)
 		})
 
 		JustBeforeEach(func() {
-			errAction = svc.TryProcessConfigs(ctx)
+			errAction = svc.IndexProcessDefinitions(ctx)
 		})
 
-		It("succeeds", func() {
+		It("succeeds when all steps pass", func() {
 			Expect(errAction).NotTo(HaveOccurred())
 
 			Expect(fakeReader.ReadYAMLFilesCallCount()).To(Equal(1))
-			Expect(fakeStore.FileExistsCallCount()).To(Equal(1))
-			Expect(fakeStore.AddProcessedFileCallCount()).To(Equal(1))
-			Expect(fakeReader.ParseConfigFileCallCount()).To(Equal(1))
-			Expect(fakeValidator.ValidateCallCount()).To(Equal(1))
-			Expect(fakeSender.SendCallCount()).To(Equal(1))
-			Expect(fakeStore.MarkCompletedCallCount()).To(Equal(1))
+			Expect(fakeReader.GetProcessNameFromFileCallCount()).To(Equal(1))
+			Expect(fakeStore.SaveProcessDefinitionMetaCallCount()).To(Equal(1))
+
+			gotPath := fakeReader.GetProcessNameFromFileArgsForCall(0)
+			Expect(gotPath).To(Equal("dir/process.yaml"))
+
+			gotCtx, gotName, gotMetaPath := fakeStore.SaveProcessDefinitionMetaArgsForCall(0)
+			Expect(gotCtx).To(Equal(ctx))
+			Expect(gotName).To(Equal("test-process"))
+			Expect(gotMetaPath).To(Equal("dir/process.yaml"))
 		})
 
 		When("reading YAML files fails", func() {
@@ -86,123 +74,58 @@ var _ = Describe("Service", func() {
 				Expect(errAction).To(MatchError(ErrRead))
 
 				Expect(fakeReader.ReadYAMLFilesCallCount()).To(Equal(1))
-				Expect(fakeStore.FileExistsCallCount()).To(Equal(0))
-				Expect(fakeStore.AddProcessedFileCallCount()).To(Equal(0))
-				Expect(fakeReader.ParseConfigFileCallCount()).To(Equal(0))
-				Expect(fakeValidator.ValidateCallCount()).To(Equal(0))
-				Expect(fakeSender.SendCallCount()).To(Equal(0))
-				Expect(fakeStore.MarkCompletedCallCount()).To(Equal(0))
+				Expect(fakeReader.GetProcessNameFromFileCallCount()).To(Equal(0))
+				Expect(fakeStore.SaveProcessDefinitionMetaCallCount()).To(Equal(0))
 			})
 		})
 
-		When("processed file already exists", func() {
+		When("getting process name fails", func() {
 			BeforeEach(func() {
-				fakeStore.FileExistsReturns(true, nil)
+				fakeReader.GetProcessNameFromFileReturns("", ErrGetName)
 			})
 
-			It("succeeds", func() {
+			It("returns an error", func() {
+				Expect(errAction).To(MatchError(ErrGetName))
+
+				Expect(fakeReader.ReadYAMLFilesCallCount()).To(Equal(1))
+				Expect(fakeReader.GetProcessNameFromFileCallCount()).To(Equal(1))
+				Expect(fakeStore.SaveProcessDefinitionMetaCallCount()).To(Equal(0))
+			})
+		})
+
+		When("saving metadata fails", func() {
+			BeforeEach(func() {
+				fakeStore.SaveProcessDefinitionMetaReturns(ErrStoreMeta)
+			})
+
+			It("returns an error", func() {
+				Expect(errAction).To(MatchError(ErrStoreMeta))
+
+				Expect(fakeReader.ReadYAMLFilesCallCount()).To(Equal(1))
+				Expect(fakeReader.GetProcessNameFromFileCallCount()).To(Equal(1))
+				Expect(fakeStore.SaveProcessDefinitionMetaCallCount()).To(Equal(1))
+			})
+		})
+
+		When("multiple files are returned", func() {
+			BeforeEach(func() {
+				fakeReader.ReadYAMLFilesReturns([]string{"file1.yaml", "file2.yaml"}, nil)
+			})
+
+			It("handles all files", func() {
 				Expect(errAction).NotTo(HaveOccurred())
+				Expect(fakeReader.GetProcessNameFromFileCallCount()).To(Equal(2))
+				Expect(fakeStore.SaveProcessDefinitionMetaCallCount()).To(Equal(2))
 
-				Expect(fakeReader.ReadYAMLFilesCallCount()).To(Equal(1))
-				Expect(fakeStore.FileExistsCallCount()).To(Equal(1))
-				Expect(fakeStore.AddProcessedFileCallCount()).To(Equal(0))
-				Expect(fakeReader.ParseConfigFileCallCount()).To(Equal(0))
-				Expect(fakeValidator.ValidateCallCount()).To(Equal(0))
-				Expect(fakeSender.SendCallCount()).To(Equal(0))
-				Expect(fakeStore.MarkCompletedCallCount()).To(Equal(0))
+				for i := 0; i < 2; i++ {
+					path := fakeReader.GetProcessNameFromFileArgsForCall(i)
+					Expect(path).To(ContainSubstring(".yaml"))
+
+					_, name, metaPath := fakeStore.SaveProcessDefinitionMetaArgsForCall(i)
+					Expect(name).To(Equal("test-process"))
+					Expect(metaPath).To(ContainSubstring(".yaml"))
+				}
 			})
 		})
-
-		When("adding to processed file fails", func() {
-			BeforeEach(func() {
-				fakeStore.AddProcessedFileReturns(ErrWrite)
-			})
-
-			It("returns an error", func() {
-				Expect(errAction).To(MatchError(ErrWrite))
-
-				Expect(fakeReader.ReadYAMLFilesCallCount()).To(Equal(1))
-				Expect(fakeStore.FileExistsCallCount()).To(Equal(1))
-				Expect(fakeStore.AddProcessedFileCallCount()).To(Equal(1))
-				Expect(fakeReader.ParseConfigFileCallCount()).To(Equal(0))
-				Expect(fakeValidator.ValidateCallCount()).To(Equal(0))
-				Expect(fakeSender.SendCallCount()).To(Equal(0))
-				Expect(fakeStore.MarkCompletedCallCount()).To(Equal(0))
-			})
-		})
-
-		When("parsing config fails", func() {
-			BeforeEach(func() {
-				fakeReader.ParseConfigFileReturns(model.ProcessDefinition{}, ErrParse)
-			})
-
-			It("returns an error", func() {
-				Expect(errAction).To(MatchError(ErrParse))
-
-				Expect(fakeReader.ReadYAMLFilesCallCount()).To(Equal(1))
-				Expect(fakeStore.FileExistsCallCount()).To(Equal(1))
-				Expect(fakeStore.AddProcessedFileCallCount()).To(Equal(1))
-				Expect(fakeReader.ParseConfigFileCallCount()).To(Equal(1))
-				Expect(fakeValidator.ValidateCallCount()).To(Equal(0))
-				Expect(fakeSender.SendCallCount()).To(Equal(0))
-				Expect(fakeStore.MarkCompletedCallCount()).To(Equal(0))
-			})
-		})
-
-		When("validation fails", func() {
-			BeforeEach(func() {
-				fakeValidator.ValidateReturns(ErrValidation)
-			})
-
-			It("returns an error", func() {
-				Expect(errAction).To(MatchError(ErrValidation))
-
-				Expect(fakeReader.ReadYAMLFilesCallCount()).To(Equal(1))
-				Expect(fakeStore.FileExistsCallCount()).To(Equal(1))
-				Expect(fakeStore.AddProcessedFileCallCount()).To(Equal(1))
-				Expect(fakeReader.ParseConfigFileCallCount()).To(Equal(1))
-				Expect(fakeValidator.ValidateCallCount()).To(Equal(1))
-				Expect(fakeSender.SendCallCount()).To(Equal(0))
-				Expect(fakeStore.MarkCompletedCallCount()).To(Equal(0))
-			})
-		})
-
-		When("send fails", func() {
-			BeforeEach(func() {
-				fakeSender.SendReturns(ErrSend)
-			})
-
-			It("returns an error", func() {
-				Expect(errAction).To(MatchError(ErrSend))
-
-				Expect(fakeReader.ReadYAMLFilesCallCount()).To(Equal(1))
-				Expect(fakeStore.FileExistsCallCount()).To(Equal(1))
-				Expect(fakeStore.AddProcessedFileCallCount()).To(Equal(1))
-				Expect(fakeReader.ParseConfigFileCallCount()).To(Equal(1))
-				Expect(fakeValidator.ValidateCallCount()).To(Equal(1))
-				Expect(fakeSender.SendCallCount()).To(Equal(1))
-				Expect(fakeStore.MarkCompletedCallCount()).To(Equal(0))
-			})
-		})
-
-		When("marking file as complete fails", func() {
-			BeforeEach(func() {
-				fakeStore.MarkCompletedReturns(ErrMarkComplete)
-			})
-
-			It("returns an error", func() {
-				Expect(errAction).To(MatchError(ErrMarkComplete))
-
-				Expect(fakeReader.ReadYAMLFilesCallCount()).To(Equal(1))
-				Expect(fakeStore.FileExistsCallCount()).To(Equal(1))
-				Expect(fakeStore.AddProcessedFileCallCount()).To(Equal(1))
-				Expect(fakeReader.ParseConfigFileCallCount()).To(Equal(1))
-				Expect(fakeValidator.ValidateCallCount()).To(Equal(1))
-				Expect(fakeSender.SendCallCount()).To(Equal(1))
-				Expect(fakeStore.MarkCompletedCallCount()).To(Equal(1))
-			})
-		})
-
-		// TODO: cover mulptiple config files
 	})
 })

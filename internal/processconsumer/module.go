@@ -7,6 +7,7 @@ import (
 	"github.com/ggsomnoev/ntt-ds-sap-process-api/internal/lifecycle"
 	"github.com/ggsomnoev/ntt-ds-sap-process-api/internal/logger"
 	"github.com/ggsomnoev/ntt-ds-sap-process-api/internal/model"
+	"github.com/ggsomnoev/ntt-ds-sap-process-api/internal/processconsumer/handler"
 	"github.com/ggsomnoev/ntt-ds-sap-process-api/internal/processconsumer/service"
 	"github.com/ggsomnoev/ntt-ds-sap-process-api/internal/processconsumer/service/executor"
 	"github.com/ggsomnoev/ntt-ds-sap-process-api/internal/processconsumer/store"
@@ -22,12 +23,15 @@ type Consumer interface {
 func Process(
 	procSpawnFn lifecycle.ProcessSpawnFunc,
 	ctx context.Context,
-	srv *echo.Echo, // TODO: add rest of the endpoints
+	srv *echo.Echo,
 	pool *pgxpool.Pool,
 	consumer Consumer,
 ) {
 	procSpawnFn(func(ctx context.Context) error {
-		store := store.NewStore(pool)
+		processStore := store.NewProcessDBStore(pool)
+		messageStore := store.NewStore(pool)
+
+		handler.RegisterHandlers(ctx, srv, processStore)
 
 		taskHandlers := map[model.ClassType]service.Executor{
 			model.LocalCmd: executor.NewLocalCmdService(),
@@ -35,7 +39,7 @@ func Process(
 			model.ScpCmd:   executor.NewLocalCmdService(),
 		}
 
-		processHandlerSvc := service.NewService(store, taskHandlers)
+		processHandlerSvc := service.NewService(messageStore, processStore, taskHandlers)
 		err := consumer.Consume(ctx, processHandlerSvc.Run)
 		if err != nil {
 			return fmt.Errorf("consume failed: %w", err)

@@ -1,19 +1,46 @@
 package executor
 
 import (
+	"bytes"
 	"context"
+	"fmt"
+	"os/exec"
+	"strings"
 
 	"github.com/ggsomnoev/ntt-ds-sap-process-api/internal/logger"
 	"github.com/ggsomnoev/ntt-ds-sap-process-api/internal/model"
 )
 
-type LocalCmdExecutor struct{}
+type LocalCmdExecutor struct {
+}
 
 func NewLocalCmdService() *LocalCmdExecutor {
 	return &LocalCmdExecutor{}
 }
 
 func (le *LocalCmdExecutor) Run(ctx context.Context, task model.Task) error {
-	logger.GetLogger().Infof("Got local task: %v", task)
+	cmdStr, ok := task.Parameters["command"]
+	if !ok || strings.TrimSpace(cmdStr) == "" {
+		return fmt.Errorf("missing 'command' parameter in task %q", task.Name)
+	}
+
+	logger.GetLogger().Infof("Executing local command: %q", cmdStr)
+
+	// Use 'sh -c' to support shell features like pipes, redirects, etc.
+	cmd := exec.CommandContext(ctx, "sh", "-c", cmdStr)
+
+	var stdoutBuf, stderrBuf bytes.Buffer
+	cmd.Stdout = &stdoutBuf
+	cmd.Stderr = &stderrBuf
+
+	err := cmd.Run()
+	output := stdoutBuf.String()
+	errOutput := stderrBuf.String()
+
+	if err != nil {
+		return fmt.Errorf("local command execution failed for task %q: %w. Error output: %s", task.Name, err, errOutput)
+	}
+
+	logger.GetLogger().Infof("Local command for task %q executed successfully. Output: %s.", task.Name, output)
 	return nil
 }

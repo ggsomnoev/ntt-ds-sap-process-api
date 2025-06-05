@@ -3,11 +3,19 @@ package service
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/ggsomnoev/ntt-ds-sap-process-api/internal/logger"
 	"github.com/ggsomnoev/ntt-ds-sap-process-api/internal/model"
 	"github.com/google/uuid"
 )
+
+//go:generate counterfeiter . ProcessStore
+type ProcessStore interface {
+	InsertProcess(context.Context, model.ProcessRun) error
+	AppendProcessLog(context.Context, uuid.UUID, string) error
+	UpdateProcessStatus(context.Context, uuid.UUID, model.ProcessStatus) error
+}
 
 //counterfeiter:generate . Store
 type Store interface {
@@ -23,17 +31,20 @@ type Executor interface {
 }
 
 type Service struct {
-	store     Store
-	executors map[model.ClassType]Executor
+	store        Store
+	processStore ProcessStore
+	executors    map[model.ClassType]Executor
 }
 
 func NewService(
 	store Store,
+	processStore ProcessStore,
 	executors map[model.ClassType]Executor,
 ) *Service {
 	return &Service{
-		store:     store,
-		executors: executors,
+		store:        store,
+		processStore: processStore,
+		executors:    executors,
 	}
 }
 
@@ -67,26 +78,53 @@ func (s *Service) Run(ctx context.Context, message model.Message) error {
 }
 
 func (s *Service) runProcessDefinition(ctx context.Context, def model.ProcessDefinition) error {
+	processID := uuid.New()
+	startedAt := time.Now()
+
+	process := model.ProcessRun{
+		ID:         processID,
+		Definition: def,
+		Status:     model.StatusRunning,
+		StartedAt:  startedAt,
+	}
+
+	if err := s.processStore.InsertProcess(ctx, process); err != nil {
+		return fmt.Errorf("failed to insert process: %w", err)
+	}
+
 	taskStatus := make(map[string]bool)
 
 	for _, task := range def.Tasks {
 		for _, dep := range task.WaitFor {
 			if !taskStatus[dep] {
-				logger.GetLogger().Warnf("Task %s cannot run before dependency %s", task.Name, dep)
+				msg := fmt.Sprintf("Task %s cannot run before dependency %s", task.Name, dep)
+				logger.GetLogger().Warnf(msg)
+				s.processStore.AppendProcessLog(ctx, processID, msg)
 				return nil
 			}
 		}
 
 		executor, ok := s.executors[task.Class]
 		if !ok {
-			return fmt.Errorf("no executor registered for class type: %s", task.Class)
+			msg := fmt.Sprintf("No executor registered for class type: %s", task.Class)
+			s.processStore.AppendProcessLog(ctx, processID, msg)
+			return fmt.Errorf(msg)
 		}
 
 		if err := executor.Run(ctx, task); err != nil {
-			return fmt.Errorf("failed to run task %s: %w", task.Name, err)
+			msg := fmt.Sprintf("Failed to run task %s: %v", task.Name, err)
+			s.processStore.AppendProcessLog(ctx, processID, msg)
+			return fmt.Errorf("executor error: %w", err)
 		}
 
+		s.processStore.AppendProcessLog(ctx, processID, fmt.Sprintf("Task %s completed", task.Name))
 		taskStatus[task.Name] = true
+	}
+
+	process.Status = model.StatusCompleted
+
+	if err := s.processStore.UpdateProcessStatus(ctx, process.ID, process.Status); err != nil {
+		return fmt.Errorf("failed to update process status: %w", err)
 	}
 
 	return nil

@@ -4,22 +4,21 @@ package servicefakes
 import (
 	"sync"
 
-	"github.com/ggsomnoev/ntt-ds-sap-process-api/internal/model"
 	"github.com/ggsomnoev/ntt-ds-sap-process-api/internal/processloader/service"
 )
 
 type FakeReader struct {
-	ParseConfigFileStub        func(string) (model.ProcessDefinition, error)
-	parseConfigFileMutex       sync.RWMutex
-	parseConfigFileArgsForCall []struct {
+	GetProcessNameFromFileStub        func(string) (string, error)
+	getProcessNameFromFileMutex       sync.RWMutex
+	getProcessNameFromFileArgsForCall []struct {
 		arg1 string
 	}
-	parseConfigFileReturns struct {
-		result1 model.ProcessDefinition
+	getProcessNameFromFileReturns struct {
+		result1 string
 		result2 error
 	}
-	parseConfigFileReturnsOnCall map[int]struct {
-		result1 model.ProcessDefinition
+	getProcessNameFromFileReturnsOnCall map[int]struct {
+		result1 string
 		result2 error
 	}
 	ReadYAMLFilesStub        func() ([]string, error)
@@ -38,16 +37,16 @@ type FakeReader struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeReader) ParseConfigFile(arg1 string) (model.ProcessDefinition, error) {
-	fake.parseConfigFileMutex.Lock()
-	ret, specificReturn := fake.parseConfigFileReturnsOnCall[len(fake.parseConfigFileArgsForCall)]
-	fake.parseConfigFileArgsForCall = append(fake.parseConfigFileArgsForCall, struct {
+func (fake *FakeReader) GetProcessNameFromFile(arg1 string) (string, error) {
+	fake.getProcessNameFromFileMutex.Lock()
+	ret, specificReturn := fake.getProcessNameFromFileReturnsOnCall[len(fake.getProcessNameFromFileArgsForCall)]
+	fake.getProcessNameFromFileArgsForCall = append(fake.getProcessNameFromFileArgsForCall, struct {
 		arg1 string
 	}{arg1})
-	stub := fake.ParseConfigFileStub
-	fakeReturns := fake.parseConfigFileReturns
-	fake.recordInvocation("ParseConfigFile", []interface{}{arg1})
-	fake.parseConfigFileMutex.Unlock()
+	stub := fake.GetProcessNameFromFileStub
+	fakeReturns := fake.getProcessNameFromFileReturns
+	fake.recordInvocation("GetProcessNameFromFile", []interface{}{arg1})
+	fake.getProcessNameFromFileMutex.Unlock()
 	if stub != nil {
 		return stub(arg1)
 	}
@@ -57,47 +56,47 @@ func (fake *FakeReader) ParseConfigFile(arg1 string) (model.ProcessDefinition, e
 	return fakeReturns.result1, fakeReturns.result2
 }
 
-func (fake *FakeReader) ParseConfigFileCallCount() int {
-	fake.parseConfigFileMutex.RLock()
-	defer fake.parseConfigFileMutex.RUnlock()
-	return len(fake.parseConfigFileArgsForCall)
+func (fake *FakeReader) GetProcessNameFromFileCallCount() int {
+	fake.getProcessNameFromFileMutex.RLock()
+	defer fake.getProcessNameFromFileMutex.RUnlock()
+	return len(fake.getProcessNameFromFileArgsForCall)
 }
 
-func (fake *FakeReader) ParseConfigFileCalls(stub func(string) (model.ProcessDefinition, error)) {
-	fake.parseConfigFileMutex.Lock()
-	defer fake.parseConfigFileMutex.Unlock()
-	fake.ParseConfigFileStub = stub
+func (fake *FakeReader) GetProcessNameFromFileCalls(stub func(string) (string, error)) {
+	fake.getProcessNameFromFileMutex.Lock()
+	defer fake.getProcessNameFromFileMutex.Unlock()
+	fake.GetProcessNameFromFileStub = stub
 }
 
-func (fake *FakeReader) ParseConfigFileArgsForCall(i int) string {
-	fake.parseConfigFileMutex.RLock()
-	defer fake.parseConfigFileMutex.RUnlock()
-	argsForCall := fake.parseConfigFileArgsForCall[i]
+func (fake *FakeReader) GetProcessNameFromFileArgsForCall(i int) string {
+	fake.getProcessNameFromFileMutex.RLock()
+	defer fake.getProcessNameFromFileMutex.RUnlock()
+	argsForCall := fake.getProcessNameFromFileArgsForCall[i]
 	return argsForCall.arg1
 }
 
-func (fake *FakeReader) ParseConfigFileReturns(result1 model.ProcessDefinition, result2 error) {
-	fake.parseConfigFileMutex.Lock()
-	defer fake.parseConfigFileMutex.Unlock()
-	fake.ParseConfigFileStub = nil
-	fake.parseConfigFileReturns = struct {
-		result1 model.ProcessDefinition
+func (fake *FakeReader) GetProcessNameFromFileReturns(result1 string, result2 error) {
+	fake.getProcessNameFromFileMutex.Lock()
+	defer fake.getProcessNameFromFileMutex.Unlock()
+	fake.GetProcessNameFromFileStub = nil
+	fake.getProcessNameFromFileReturns = struct {
+		result1 string
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *FakeReader) ParseConfigFileReturnsOnCall(i int, result1 model.ProcessDefinition, result2 error) {
-	fake.parseConfigFileMutex.Lock()
-	defer fake.parseConfigFileMutex.Unlock()
-	fake.ParseConfigFileStub = nil
-	if fake.parseConfigFileReturnsOnCall == nil {
-		fake.parseConfigFileReturnsOnCall = make(map[int]struct {
-			result1 model.ProcessDefinition
+func (fake *FakeReader) GetProcessNameFromFileReturnsOnCall(i int, result1 string, result2 error) {
+	fake.getProcessNameFromFileMutex.Lock()
+	defer fake.getProcessNameFromFileMutex.Unlock()
+	fake.GetProcessNameFromFileStub = nil
+	if fake.getProcessNameFromFileReturnsOnCall == nil {
+		fake.getProcessNameFromFileReturnsOnCall = make(map[int]struct {
+			result1 string
 			result2 error
 		})
 	}
-	fake.parseConfigFileReturnsOnCall[i] = struct {
-		result1 model.ProcessDefinition
+	fake.getProcessNameFromFileReturnsOnCall[i] = struct {
+		result1 string
 		result2 error
 	}{result1, result2}
 }
@@ -161,8 +160,8 @@ func (fake *FakeReader) ReadYAMLFilesReturnsOnCall(i int, result1 []string, resu
 func (fake *FakeReader) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.parseConfigFileMutex.RLock()
-	defer fake.parseConfigFileMutex.RUnlock()
+	fake.getProcessNameFromFileMutex.RLock()
+	defer fake.getProcessNameFromFileMutex.RUnlock()
 	fake.readYAMLFilesMutex.RLock()
 	defer fake.readYAMLFilesMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}

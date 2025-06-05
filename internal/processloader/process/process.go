@@ -8,10 +8,10 @@ import (
 	"github.com/ggsomnoev/ntt-ds-sap-process-api/internal/lifecycle"
 )
 
-const pollInterval = 60 * time.Second
+const pollInterval = 30 * time.Second
 
 type Service interface {
-	TryProcessConfigs(ctx context.Context) error
+	IndexProcessDefinitions(ctx context.Context) error
 }
 
 func Process(
@@ -28,7 +28,7 @@ func Process(
 			case <-ctx.Done():
 				return nil
 			case <-ticker.C:
-				err := processLoader.TryProcessConfigs(ctx)
+				err := processLoader.IndexProcessDefinitions(ctx)
 				if err != nil {
 					return fmt.Errorf("failed to process config files: %w", err)
 				}

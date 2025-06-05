@@ -18,7 +18,12 @@ import (
 	"github.com/ggsomnoev/ntt-ds-sap-process-api/internal/processproducer/handler/handlerfakes"
 )
 
-var ErrPublishFailed = errors.New("failed to publish process")
+var (
+	ErrNotFound      = errors.New("not found")
+	ErrTemplate      = errors.New("template error")
+	ErrValidation    = errors.New("validation error")
+	ErrPublishFailed = errors.New("failed to publish process")
+)
 
 var _ = Describe("Process Handler", func() {
 	var (
@@ -26,6 +31,9 @@ var _ = Describe("Process Handler", func() {
 		ctx       context.Context
 		recorder  *httptest.ResponseRecorder
 		publisher *handlerfakes.FakePublisher
+		store     *handlerfakes.FakeProcessDefinitionStore
+		reader    *handlerfakes.FakeReader
+		validator *handlerfakes.FakeValidator
 	)
 
 	BeforeEach(func() {
@@ -33,7 +41,10 @@ var _ = Describe("Process Handler", func() {
 		ctx = context.Background()
 		recorder = httptest.NewRecorder()
 		publisher = &handlerfakes.FakePublisher{}
-		handler.RegisterHandlers(ctx, e, publisher)
+		reader = &handlerfakes.FakeReader{}
+		store = &handlerfakes.FakeProcessDefinitionStore{}
+		validator = &handlerfakes.FakeValidator{}
+		handler.RegisterHandlers(ctx, e, publisher, reader, store, validator)
 	})
 
 	Describe("POST /startProcess", func() {
@@ -45,17 +56,21 @@ var _ = Describe("Process Handler", func() {
 		BeforeEach(func() {
 			process = model.ProcessDefinition{
 				Name: "sample",
-				Params: []model.Param{
-					{Name: "env", Mandatory: true, DefValue: "dev", Description: "Environment"},
-				},
 				Tasks: []model.Task{
 					{Name: "print", Class: model.LocalCmd, Parameters: map[string]string{"cmd": "echo Hello"}},
 				},
 			}
 
-			body, _ := json.Marshal(process)
+			body, _ := json.Marshal(handler.StartProcessRequest{
+				Name: "sample",
+			})
+
 			req = httptest.NewRequest(http.MethodPost, "/startProcess", bytes.NewReader(body))
 			req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+
+			store.GetProcessPathByNameReturns("dir/sample.yaml", nil)
+			reader.ParseConfigFileReturns(process, nil)
+			reader.ApplyTemplatingToTasksReturns(process.Tasks, nil)
 		})
 
 		JustBeforeEach(func() {
@@ -64,6 +79,10 @@ var _ = Describe("Process Handler", func() {
 
 		It("succeeds", func() {
 			Expect(recorder.Code).To(Equal(http.StatusOK))
+			Expect(store.GetProcessPathByNameCallCount()).To(Equal(1))
+			Expect(reader.ParseConfigFileCallCount()).To(Equal(1))
+			Expect(reader.ApplyTemplatingToTasksCallCount()).To(Equal(1))
+			Expect(validator.ValidateCallCount()).To(Equal(1))
 			Expect(publisher.PublishCallCount()).To(Equal(1))
 			_, actualMessage := publisher.PublishArgsForCall(0)
 			Expect(actualMessage.UUID).NotTo(Equal(uuid.Nil))
@@ -81,29 +100,58 @@ var _ = Describe("Process Handler", func() {
 			})
 		})
 
-		When("validation fails", func() {
+		When("store fails to return path", func() {
 			BeforeEach(func() {
-				process = model.ProcessDefinition{
-					Name:  "",
-					Tasks: []model.Task{},
-				}
-				body, _ := json.Marshal(process)
-				req = httptest.NewRequest(http.MethodPost, "/startProcess", bytes.NewReader(body))
-				req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+				store.GetProcessPathByNameReturns("", ErrNotFound)
 			})
 
-			It("returns 400", func() {
+			It("returns 400 with store error", func() {
 				Expect(recorder.Code).To(Equal(http.StatusBadRequest))
+				Expect(recorder.Body.String()).To(ContainSubstring("No such process"))
 			})
 		})
 
-		When("publish fails", func() {
+		When("reader fails to parse config file", func() {
+			BeforeEach(func() {
+				reader.ParseConfigFileReturns(model.ProcessDefinition{}, errors.New("parse error"))
+			})
+
+			It("returns 400 with parse error", func() {
+				Expect(recorder.Code).To(Equal(http.StatusBadRequest))
+				Expect(recorder.Body.String()).To(ContainSubstring("Process definition not found"))
+			})
+		})
+
+		When("templating fails", func() {
+			BeforeEach(func() {
+				reader.ApplyTemplatingToTasksReturns(nil, ErrTemplate)
+			})
+
+			It("returns 400 with templating error", func() {
+				Expect(recorder.Code).To(Equal(http.StatusBadRequest))
+				Expect(recorder.Body.String()).To(ContainSubstring("Failed to apply parameters"))
+			})
+		})
+
+		When("validation fails", func() {
+			BeforeEach(func() {
+				validator.ValidateReturns(ErrValidation)
+			})
+
+			It("returns 400 with validation error", func() {
+				Expect(recorder.Code).To(Equal(http.StatusBadRequest))
+				Expect(recorder.Body.String()).To(ContainSubstring("validation error"))
+			})
+		})
+
+		When("publishing fails", func() {
 			BeforeEach(func() {
 				publisher.PublishReturns(ErrPublishFailed)
 			})
 
-			It("returns 500", func() {
+			It("returns 500 with publishing error", func() {
 				Expect(recorder.Code).To(Equal(http.StatusInternalServerError))
+				Expect(recorder.Body.String()).To(ContainSubstring("failed to publish process"))
 			})
 		})
 	})

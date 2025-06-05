@@ -1,8 +1,6 @@
 package store_test
 
 import (
-	"context"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -20,125 +18,66 @@ var _ = Describe("Store", func() {
 		var (
 			s         *store.Store
 			errAction error
-			filename  string
+			name      string
+			path      string
 		)
 
 		BeforeEach(func() {
 			s = store.NewStore(pool)
 
-			filename = "test.yaml"
+			name = "sample-process"
+			path = "/etc/config/sample.yaml"
 		})
 
-		Describe("AddProcessedFile", func() {
+		Describe("SaveProcessDefinitionMeta", func() {
 			JustBeforeEach(func() {
-				errAction = s.RunInAtomically(ctx, func(ctx context.Context) error {
-					return s.AddProcessedFile(ctx, filename)
-				})
-			})
-
-			JustAfterEach(func() {
-				err := s.DeleteProcessedFile(ctx, filename)
-				Expect(err).NotTo(HaveOccurred())
+				errAction = s.SaveProcessDefinitionMeta(ctx, name, path)
 			})
 
 			It("succeeds", func() {
 				Expect(errAction).NotTo(HaveOccurred())
 			})
 
-			Context("and the filename is inserted", func() {
-				var (
-					exists bool
-					err    error
-				)
+			It("saves a new process definition entry", func() {
+				storedPath, err := s.GetProcessPathByName(ctx, name)
+				Expect(err).NotTo(HaveOccurred())
 
-				BeforeEach(func() {
-					errAction = s.RunInAtomically(ctx, func(ctx context.Context) error {
-						exists, err = s.FileExists(ctx, filename)
-						return nil
-					})
-				})
+				Expect(storedPath).To(Equal(path))
+			})
 
-				It("succeeds", func() {
-					Expect(err).NotTo(HaveOccurred())
-					Expect(exists).To(BeTrue())
-				})
+			It("updates the path on conflict", func() {
+				newPath := "/new/location/updated.yaml"
+				Expect(s.SaveProcessDefinitionMeta(ctx, name, newPath)).To(Succeed())
 
+				var storedPath string
+
+				storedPath, err := s.GetProcessPathByName(ctx, name)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(storedPath).To(Equal(newPath))
 			})
 		})
 
-		Describe("MarkCompleted", func() {
+		Describe("GetProcessPathByName", func() {
+			var storedPath string
 			BeforeEach(func() {
-				err := s.RunInAtomically(ctx, func(ctx context.Context) error {
-					return s.AddProcessedFile(ctx, filename)
-				})
-				Expect(err).NotTo(HaveOccurred())
-			})
-
-			AfterEach(func() {
-				err := s.DeleteProcessedFile(ctx, filename)
-				Expect(err).NotTo(HaveOccurred())
+				Expect(s.SaveProcessDefinitionMeta(ctx, name, path)).To(Succeed())
 			})
 
 			JustBeforeEach(func() {
-				errAction = s.RunInAtomically(ctx, func(txCtx context.Context) error {
-					return s.MarkCompleted(txCtx, filename)
-				})
+				storedPath, errAction = s.GetProcessPathByName(ctx, name)
 			})
 
 			It("succeeds", func() {
 				Expect(errAction).NotTo(HaveOccurred())
 			})
 
-			It("marks the message as completed", func() {
-				completedAt, err := s.GetCompletedAtByFilename(ctx, filename)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(completedAt).NotTo(BeZero())
-			})
-		})
-
-		Describe("FileExists", func() {
-			var exists bool
-			JustBeforeEach(func() {
-				errAction = s.RunInAtomically(ctx, func(txCtx context.Context) error {
-					var err error
-					exists, err = s.FileExists(txCtx, filename)
-					return err
-				})
+			It("returns the correct path for an existing name", func() {
+				Expect(storedPath).To(Equal(path))
 			})
 
-			It("returns false for filename", func() {
-				Expect(exists).To(BeFalse())
-			})
-
-			Context("and a filename is added", func() {
-				var exists bool
-				BeforeEach(func() {
-					err := s.RunInAtomically(ctx, func(txCtx context.Context) error {
-						return s.AddProcessedFile(txCtx, filename)
-					})
-					Expect(err).NotTo(HaveOccurred())
-				})
-
-				AfterEach(func() {
-					err := s.DeleteProcessedFile(ctx, filename)
-					Expect(err).NotTo(HaveOccurred())
-				})
-
-				JustBeforeEach(func() {
-					errAction = s.RunInAtomically(ctx, func(txCtx context.Context) error {
-						var err error
-						exists, err = s.FileExists(txCtx, filename)
-						return err
-					})
-				})
-
-				It("succeeds", func() {
-					Expect(errAction).NotTo(HaveOccurred())
-				})
-
-				It("returns true for inserted filename", func() {
-					Expect(exists).To(BeTrue())
-				})
+			It("returns an error if the name doesn't exist", func() {
+				_, err := s.GetProcessPathByName(ctx, "nonexistent")
+				Expect(err).To(MatchError(ContainSubstring("not found")))
 			})
 		})
 	})

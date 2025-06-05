@@ -6,12 +6,28 @@ import (
 
 	"github.com/ggsomnoev/ntt-ds-sap-process-api/internal/logger"
 	"github.com/ggsomnoev/ntt-ds-sap-process-api/internal/model"
-	"github.com/ggsomnoev/ntt-ds-sap-process-api/internal/validator"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 )
 
 const successfullyAddedProcess = "successfully added process"
+
+type StartProcessRequest struct {
+	Name       string            `json:"name"`
+	Parameters map[string]string `json:"parameters"`
+}
+
+//counterfeiter:generate . ProcessDefinitionStore
+type ProcessDefinitionStore interface {
+	GetProcessPathByName(context.Context, string) (string, error)
+}
+
+//counterfeiter:generate . Reader
+type Reader interface {
+	ParseConfigFile(string) (model.ProcessDefinition, error)
+	GetProcessNameFromFile(string) (string, error)
+	ApplyTemplatingToTasks([]model.Task, map[string]string) ([]model.Task, error)
+}
 
 //counterfeiter:generate . Publisher
 type Publisher interface {
@@ -19,32 +35,60 @@ type Publisher interface {
 	Close() error
 }
 
-func RegisterHandlers(ctx context.Context, srv *echo.Echo, publisher Publisher) {
+//counterfeiter:generate . Validator
+type Validator interface {
+	Validate(model.ProcessDefinition) error
+}
+
+func RegisterHandlers(ctx context.Context, srv *echo.Echo, publisher Publisher, reader Reader, store ProcessDefinitionStore, validator Validator) {
 	if srv != nil {
-		srv.POST("/startProcess", handleNewProcess(ctx, publisher))
+		srv.POST("/startProcess", handleNewProcess(ctx, publisher, reader, store, validator))
 	} else {
 		logger.GetLogger().Warn("Running routes without a webapi server, did NOT register routes.")
 	}
 }
 
-func handleNewProcess(ctx context.Context, publisher Publisher) echo.HandlerFunc {
-	validatorSvc := validator.NewProcessValidator()
-	
+func handleNewProcess(ctx context.Context, publisher Publisher, reader Reader, store ProcessDefinitionStore, validator Validator) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		var process model.ProcessDefinition
-		if err := c.Bind(&process); err != nil {
+		var req StartProcessRequest
+		if err := c.Bind(&req); err != nil {
 			return c.JSON(http.StatusBadRequest, map[string]string{
 				"error": err.Error(),
 			})
 		}
+		processPath, err := store.GetProcessPathByName(ctx, req.Name)
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, map[string]string{
+				"message": "Process definition template not found",
+				"error":   err.Error(),
+			})
+		}
 
-		if err := validatorSvc.Validate(process); err != nil {
+		processDef, err := reader.ParseConfigFile(processPath)
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, map[string]string{
+				"message": "Could not parse process definition template",
+				"error":   err.Error(),
+			})
+		}
+
+		tasks, err := reader.ApplyTemplatingToTasks(processDef.Tasks, req.Parameters)
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, map[string]string{
+				"message": "Failed to apply parameters",
+				"error":   err.Error(),
+			})
+		}
+
+		processDef.Tasks = tasks
+
+		if err := validator.Validate(processDef); err != nil {
 			return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
 		}
 
 		message := model.Message{
-			UUID:         uuid.New(),
-			ProcessDefinition: process,
+			UUID:              uuid.New(),
+			ProcessDefinition: processDef,
 		}
 
 		if err := publisher.Publish(ctx, message); err != nil {

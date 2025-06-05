@@ -7,8 +7,10 @@ import (
 	"github.com/ggsomnoev/ntt-ds-sap-process-api/internal/healthcheck"
 	"github.com/ggsomnoev/ntt-ds-sap-process-api/internal/healthcheck/service"
 	"github.com/ggsomnoev/ntt-ds-sap-process-api/internal/healthcheck/service/component"
-	"github.com/ggsomnoev/ntt-ds-sap-process-api/internal/processproducer"
 	"github.com/ggsomnoev/ntt-ds-sap-process-api/internal/lifecycle"
+	"github.com/ggsomnoev/ntt-ds-sap-process-api/internal/pg"
+	"github.com/ggsomnoev/ntt-ds-sap-process-api/internal/processloader"
+	producer "github.com/ggsomnoev/ntt-ds-sap-process-api/internal/processproducer"
 	"github.com/ggsomnoev/ntt-ds-sap-process-api/internal/rabbitmq"
 	"github.com/ggsomnoev/ntt-ds-sap-process-api/internal/webapi"
 )
@@ -37,10 +39,26 @@ func main() {
 		panic(fmt.Errorf("failed to connect to RabbitMQ: %w", err))
 	}
 
-	producer.Process(procSpawnFn, appCtx, srv, rmqClient)
+	dbCfg := pg.PoolConfig{
+		MinConns:          cfg.DBMinConns,
+		MaxConns:          cfg.DBMaxConns,
+		MaxConnLifetime:   cfg.DBMaxConnLifetime,
+		MaxConnIdleTime:   cfg.DBMaxConnIdleTime,
+		HealthCheckPeriod: cfg.DBHealthCheck,
+	}
+	pool, err := pg.InitPool(appCtx, cfg.DBConnectionURL, dbCfg)
+	if err != nil {
+		panic(fmt.Errorf("failed initializing DB pool: %w", err))
+	}
+	defer pool.Close()
 
+	configStore, configReader := processloader.Process(procSpawnFn, appCtx, cfg.ProcessCfgDir, pool)
+
+	producer.Process(procSpawnFn, appCtx, srv, rmqClient, configReader, configStore)
+
+	dbComp := component.NewDBChecker(pool)
 	rmqConn := component.NewRabbitMQChecker(rmqClient.Connection())
-	healthCheckService := service.NewHealthCheckService(rmqConn)
+	healthCheckService := service.NewHealthCheckService(rmqConn, dbComp)
 	healthcheck.Process(procSpawnFn, appCtx, srv, healthCheckService)
 
 	webapi.Start(procSpawnFn, srv, cfg.APIPort)

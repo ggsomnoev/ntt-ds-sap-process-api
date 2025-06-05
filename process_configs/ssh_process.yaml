@@ -1,0 +1,17 @@
+name: uniqueSSHProcess
+
+params:
+  - name: parameterName
+    mandatory: true
+    description: description of the parameter
+    defvalue: ""
+
+tasks:
+  - name: ssh_task
+    class: sshCmd
+    parameters:
+      host: "{{.host}}"
+      port: "{{.port}}"          
+      user: "{{.user}}"
+      password: "{{.password}}" # work with public/private keys in env diff than local
+      command: "{{.value}}"

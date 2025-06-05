@@ -37,7 +37,7 @@ func main() {
 
 	srv := webapi.NewServer(appCtx)
 
-	processloader.Process(procSpawnFn, appCtx, cfg.ProcessCfgDir, pool, cfg.WebAPIAddress)
+	processloader.Process(procSpawnFn, appCtx, cfg.ProcessCfgDir, pool)
 
 	dbComp := component.NewDBChecker(pool)
 	healthCheckService := service.NewHealthCheckService(dbComp)

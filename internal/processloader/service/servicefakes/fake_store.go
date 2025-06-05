@@ -9,73 +9,37 @@ import (
 )
 
 type FakeStore struct {
-	AddProcessedFileStub        func(context.Context, string) error
-	addProcessedFileMutex       sync.RWMutex
-	addProcessedFileArgsForCall []struct {
+	SaveProcessDefinitionMetaStub        func(context.Context, string, string) error
+	saveProcessDefinitionMetaMutex       sync.RWMutex
+	saveProcessDefinitionMetaArgsForCall []struct {
 		arg1 context.Context
 		arg2 string
+		arg3 string
 	}
-	addProcessedFileReturns struct {
+	saveProcessDefinitionMetaReturns struct {
 		result1 error
 	}
-	addProcessedFileReturnsOnCall map[int]struct {
-		result1 error
-	}
-	FileExistsStub        func(context.Context, string) (bool, error)
-	fileExistsMutex       sync.RWMutex
-	fileExistsArgsForCall []struct {
-		arg1 context.Context
-		arg2 string
-	}
-	fileExistsReturns struct {
-		result1 bool
-		result2 error
-	}
-	fileExistsReturnsOnCall map[int]struct {
-		result1 bool
-		result2 error
-	}
-	MarkCompletedStub        func(context.Context, string) error
-	markCompletedMutex       sync.RWMutex
-	markCompletedArgsForCall []struct {
-		arg1 context.Context
-		arg2 string
-	}
-	markCompletedReturns struct {
-		result1 error
-	}
-	markCompletedReturnsOnCall map[int]struct {
-		result1 error
-	}
-	RunInAtomicallyStub        func(context.Context, func(ctx context.Context) error) error
-	runInAtomicallyMutex       sync.RWMutex
-	runInAtomicallyArgsForCall []struct {
-		arg1 context.Context
-		arg2 func(ctx context.Context) error
-	}
-	runInAtomicallyReturns struct {
-		result1 error
-	}
-	runInAtomicallyReturnsOnCall map[int]struct {
+	saveProcessDefinitionMetaReturnsOnCall map[int]struct {
 		result1 error
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeStore) AddProcessedFile(arg1 context.Context, arg2 string) error {
-	fake.addProcessedFileMutex.Lock()
-	ret, specificReturn := fake.addProcessedFileReturnsOnCall[len(fake.addProcessedFileArgsForCall)]
-	fake.addProcessedFileArgsForCall = append(fake.addProcessedFileArgsForCall, struct {
+func (fake *FakeStore) SaveProcessDefinitionMeta(arg1 context.Context, arg2 string, arg3 string) error {
+	fake.saveProcessDefinitionMetaMutex.Lock()
+	ret, specificReturn := fake.saveProcessDefinitionMetaReturnsOnCall[len(fake.saveProcessDefinitionMetaArgsForCall)]
+	fake.saveProcessDefinitionMetaArgsForCall = append(fake.saveProcessDefinitionMetaArgsForCall, struct {
 		arg1 context.Context
 		arg2 string
-	}{arg1, arg2})
-	stub := fake.AddProcessedFileStub
-	fakeReturns := fake.addProcessedFileReturns
-	fake.recordInvocation("AddProcessedFile", []interface{}{arg1, arg2})
-	fake.addProcessedFileMutex.Unlock()
+		arg3 string
+	}{arg1, arg2, arg3})
+	stub := fake.SaveProcessDefinitionMetaStub
+	fakeReturns := fake.saveProcessDefinitionMetaReturns
+	fake.recordInvocation("SaveProcessDefinitionMeta", []interface{}{arg1, arg2, arg3})
+	fake.saveProcessDefinitionMetaMutex.Unlock()
 	if stub != nil {
-		return stub(arg1, arg2)
+		return stub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1
@@ -83,233 +47,44 @@ func (fake *FakeStore) AddProcessedFile(arg1 context.Context, arg2 string) error
 	return fakeReturns.result1
 }
 
-func (fake *FakeStore) AddProcessedFileCallCount() int {
-	fake.addProcessedFileMutex.RLock()
-	defer fake.addProcessedFileMutex.RUnlock()
-	return len(fake.addProcessedFileArgsForCall)
+func (fake *FakeStore) SaveProcessDefinitionMetaCallCount() int {
+	fake.saveProcessDefinitionMetaMutex.RLock()
+	defer fake.saveProcessDefinitionMetaMutex.RUnlock()
+	return len(fake.saveProcessDefinitionMetaArgsForCall)
 }
 
-func (fake *FakeStore) AddProcessedFileCalls(stub func(context.Context, string) error) {
-	fake.addProcessedFileMutex.Lock()
-	defer fake.addProcessedFileMutex.Unlock()
-	fake.AddProcessedFileStub = stub
+func (fake *FakeStore) SaveProcessDefinitionMetaCalls(stub func(context.Context, string, string) error) {
+	fake.saveProcessDefinitionMetaMutex.Lock()
+	defer fake.saveProcessDefinitionMetaMutex.Unlock()
+	fake.SaveProcessDefinitionMetaStub = stub
 }
 
-func (fake *FakeStore) AddProcessedFileArgsForCall(i int) (context.Context, string) {
-	fake.addProcessedFileMutex.RLock()
-	defer fake.addProcessedFileMutex.RUnlock()
-	argsForCall := fake.addProcessedFileArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2
+func (fake *FakeStore) SaveProcessDefinitionMetaArgsForCall(i int) (context.Context, string, string) {
+	fake.saveProcessDefinitionMetaMutex.RLock()
+	defer fake.saveProcessDefinitionMetaMutex.RUnlock()
+	argsForCall := fake.saveProcessDefinitionMetaArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
 }
 
-func (fake *FakeStore) AddProcessedFileReturns(result1 error) {
-	fake.addProcessedFileMutex.Lock()
-	defer fake.addProcessedFileMutex.Unlock()
-	fake.AddProcessedFileStub = nil
-	fake.addProcessedFileReturns = struct {
+func (fake *FakeStore) SaveProcessDefinitionMetaReturns(result1 error) {
+	fake.saveProcessDefinitionMetaMutex.Lock()
+	defer fake.saveProcessDefinitionMetaMutex.Unlock()
+	fake.SaveProcessDefinitionMetaStub = nil
+	fake.saveProcessDefinitionMetaReturns = struct {
 		result1 error
 	}{result1}
 }
 
-func (fake *FakeStore) AddProcessedFileReturnsOnCall(i int, result1 error) {
-	fake.addProcessedFileMutex.Lock()
-	defer fake.addProcessedFileMutex.Unlock()
-	fake.AddProcessedFileStub = nil
-	if fake.addProcessedFileReturnsOnCall == nil {
-		fake.addProcessedFileReturnsOnCall = make(map[int]struct {
+func (fake *FakeStore) SaveProcessDefinitionMetaReturnsOnCall(i int, result1 error) {
+	fake.saveProcessDefinitionMetaMutex.Lock()
+	defer fake.saveProcessDefinitionMetaMutex.Unlock()
+	fake.SaveProcessDefinitionMetaStub = nil
+	if fake.saveProcessDefinitionMetaReturnsOnCall == nil {
+		fake.saveProcessDefinitionMetaReturnsOnCall = make(map[int]struct {
 			result1 error
 		})
 	}
-	fake.addProcessedFileReturnsOnCall[i] = struct {
-		result1 error
-	}{result1}
-}
-
-func (fake *FakeStore) FileExists(arg1 context.Context, arg2 string) (bool, error) {
-	fake.fileExistsMutex.Lock()
-	ret, specificReturn := fake.fileExistsReturnsOnCall[len(fake.fileExistsArgsForCall)]
-	fake.fileExistsArgsForCall = append(fake.fileExistsArgsForCall, struct {
-		arg1 context.Context
-		arg2 string
-	}{arg1, arg2})
-	stub := fake.FileExistsStub
-	fakeReturns := fake.fileExistsReturns
-	fake.recordInvocation("FileExists", []interface{}{arg1, arg2})
-	fake.fileExistsMutex.Unlock()
-	if stub != nil {
-		return stub(arg1, arg2)
-	}
-	if specificReturn {
-		return ret.result1, ret.result2
-	}
-	return fakeReturns.result1, fakeReturns.result2
-}
-
-func (fake *FakeStore) FileExistsCallCount() int {
-	fake.fileExistsMutex.RLock()
-	defer fake.fileExistsMutex.RUnlock()
-	return len(fake.fileExistsArgsForCall)
-}
-
-func (fake *FakeStore) FileExistsCalls(stub func(context.Context, string) (bool, error)) {
-	fake.fileExistsMutex.Lock()
-	defer fake.fileExistsMutex.Unlock()
-	fake.FileExistsStub = stub
-}
-
-func (fake *FakeStore) FileExistsArgsForCall(i int) (context.Context, string) {
-	fake.fileExistsMutex.RLock()
-	defer fake.fileExistsMutex.RUnlock()
-	argsForCall := fake.fileExistsArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2
-}
-
-func (fake *FakeStore) FileExistsReturns(result1 bool, result2 error) {
-	fake.fileExistsMutex.Lock()
-	defer fake.fileExistsMutex.Unlock()
-	fake.FileExistsStub = nil
-	fake.fileExistsReturns = struct {
-		result1 bool
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *FakeStore) FileExistsReturnsOnCall(i int, result1 bool, result2 error) {
-	fake.fileExistsMutex.Lock()
-	defer fake.fileExistsMutex.Unlock()
-	fake.FileExistsStub = nil
-	if fake.fileExistsReturnsOnCall == nil {
-		fake.fileExistsReturnsOnCall = make(map[int]struct {
-			result1 bool
-			result2 error
-		})
-	}
-	fake.fileExistsReturnsOnCall[i] = struct {
-		result1 bool
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *FakeStore) MarkCompleted(arg1 context.Context, arg2 string) error {
-	fake.markCompletedMutex.Lock()
-	ret, specificReturn := fake.markCompletedReturnsOnCall[len(fake.markCompletedArgsForCall)]
-	fake.markCompletedArgsForCall = append(fake.markCompletedArgsForCall, struct {
-		arg1 context.Context
-		arg2 string
-	}{arg1, arg2})
-	stub := fake.MarkCompletedStub
-	fakeReturns := fake.markCompletedReturns
-	fake.recordInvocation("MarkCompleted", []interface{}{arg1, arg2})
-	fake.markCompletedMutex.Unlock()
-	if stub != nil {
-		return stub(arg1, arg2)
-	}
-	if specificReturn {
-		return ret.result1
-	}
-	return fakeReturns.result1
-}
-
-func (fake *FakeStore) MarkCompletedCallCount() int {
-	fake.markCompletedMutex.RLock()
-	defer fake.markCompletedMutex.RUnlock()
-	return len(fake.markCompletedArgsForCall)
-}
-
-func (fake *FakeStore) MarkCompletedCalls(stub func(context.Context, string) error) {
-	fake.markCompletedMutex.Lock()
-	defer fake.markCompletedMutex.Unlock()
-	fake.MarkCompletedStub = stub
-}
-
-func (fake *FakeStore) MarkCompletedArgsForCall(i int) (context.Context, string) {
-	fake.markCompletedMutex.RLock()
-	defer fake.markCompletedMutex.RUnlock()
-	argsForCall := fake.markCompletedArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2
-}
-
-func (fake *FakeStore) MarkCompletedReturns(result1 error) {
-	fake.markCompletedMutex.Lock()
-	defer fake.markCompletedMutex.Unlock()
-	fake.MarkCompletedStub = nil
-	fake.markCompletedReturns = struct {
-		result1 error
-	}{result1}
-}
-
-func (fake *FakeStore) MarkCompletedReturnsOnCall(i int, result1 error) {
-	fake.markCompletedMutex.Lock()
-	defer fake.markCompletedMutex.Unlock()
-	fake.MarkCompletedStub = nil
-	if fake.markCompletedReturnsOnCall == nil {
-		fake.markCompletedReturnsOnCall = make(map[int]struct {
-			result1 error
-		})
-	}
-	fake.markCompletedReturnsOnCall[i] = struct {
-		result1 error
-	}{result1}
-}
-
-func (fake *FakeStore) RunInAtomically(arg1 context.Context, arg2 func(ctx context.Context) error) error {
-	fake.runInAtomicallyMutex.Lock()
-	ret, specificReturn := fake.runInAtomicallyReturnsOnCall[len(fake.runInAtomicallyArgsForCall)]
-	fake.runInAtomicallyArgsForCall = append(fake.runInAtomicallyArgsForCall, struct {
-		arg1 context.Context
-		arg2 func(ctx context.Context) error
-	}{arg1, arg2})
-	stub := fake.RunInAtomicallyStub
-	fakeReturns := fake.runInAtomicallyReturns
-	fake.recordInvocation("RunInAtomically", []interface{}{arg1, arg2})
-	fake.runInAtomicallyMutex.Unlock()
-	if stub != nil {
-		return stub(arg1, arg2)
-	}
-	if specificReturn {
-		return ret.result1
-	}
-	return fakeReturns.result1
-}
-
-func (fake *FakeStore) RunInAtomicallyCallCount() int {
-	fake.runInAtomicallyMutex.RLock()
-	defer fake.runInAtomicallyMutex.RUnlock()
-	return len(fake.runInAtomicallyArgsForCall)
-}
-
-func (fake *FakeStore) RunInAtomicallyCalls(stub func(context.Context, func(ctx context.Context) error) error) {
-	fake.runInAtomicallyMutex.Lock()
-	defer fake.runInAtomicallyMutex.Unlock()
-	fake.RunInAtomicallyStub = stub
-}
-
-func (fake *FakeStore) RunInAtomicallyArgsForCall(i int) (context.Context, func(ctx context.Context) error) {
-	fake.runInAtomicallyMutex.RLock()
-	defer fake.runInAtomicallyMutex.RUnlock()
-	argsForCall := fake.runInAtomicallyArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2
-}
-
-func (fake *FakeStore) RunInAtomicallyReturns(result1 error) {
-	fake.runInAtomicallyMutex.Lock()
-	defer fake.runInAtomicallyMutex.Unlock()
-	fake.RunInAtomicallyStub = nil
-	fake.runInAtomicallyReturns = struct {
-		result1 error
-	}{result1}
-}
-
-func (fake *FakeStore) RunInAtomicallyReturnsOnCall(i int, result1 error) {
-	fake.runInAtomicallyMutex.Lock()
-	defer fake.runInAtomicallyMutex.Unlock()
-	fake.RunInAtomicallyStub = nil
-	if fake.runInAtomicallyReturnsOnCall == nil {
-		fake.runInAtomicallyReturnsOnCall = make(map[int]struct {
-			result1 error
-		})
-	}
-	fake.runInAtomicallyReturnsOnCall[i] = struct {
+	fake.saveProcessDefinitionMetaReturnsOnCall[i] = struct {
 		result1 error
 	}{result1}
 }
@@ -317,14 +92,8 @@ func (fake *FakeStore) RunInAtomicallyReturnsOnCall(i int, result1 error) {
 func (fake *FakeStore) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.addProcessedFileMutex.RLock()
-	defer fake.addProcessedFileMutex.RUnlock()
-	fake.fileExistsMutex.RLock()
-	defer fake.fileExistsMutex.RUnlock()
-	fake.markCompletedMutex.RLock()
-	defer fake.markCompletedMutex.RUnlock()
-	fake.runInAtomicallyMutex.RLock()
-	defer fake.runInAtomicallyMutex.RUnlock()
+	fake.saveProcessDefinitionMetaMutex.RLock()
+	defer fake.saveProcessDefinitionMetaMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

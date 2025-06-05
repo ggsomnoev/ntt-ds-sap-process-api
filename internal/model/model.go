@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -61,4 +62,28 @@ func (c *ClassType) UnmarshalJSON(data []byte) error {
 
 	*c = val
 	return nil
+}
+
+type ProcessStatus string
+
+const (
+	StatusRunning   ProcessStatus = "running"
+	StatusCompleted ProcessStatus = "completed"
+	StatusFailed    ProcessStatus = "failed"
+	StatusStopped   ProcessStatus = "stopped"
+)
+
+type ProcessRun struct {
+	ID         uuid.UUID         `json:"id"`
+	Definition ProcessDefinition `json:"definition"`
+	Status     ProcessStatus     `json:"status"`
+	StartedAt  time.Time         `json:"started_at"`
+	EndedAt    *time.Time        `json:"ended_at,omitempty"`
+}
+
+type ProcessLog struct {
+	ID        int       `json:"id"`
+	ProcessID uuid.UUID `json:"process_id"`
+	Log       string    `json:"log"`
+	CreatedAt time.Time `json:"created_at"`
 }
