@@ -36,7 +36,11 @@ func (e *SCPCmdExecutor) Run(ctx context.Context, task model.Task) error {
 	if err != nil {
 		return fmt.Errorf("failed to dial SSH: %w", err)
 	}
-	defer client.Close()
+	defer func() {
+		if err := client.Close(); err != nil {
+			logger.GetLogger().Warnf("failed to close SSH client: %v", err)
+		}
+	}()
 
 	logger.GetLogger().Infof("About to transfer file to %s...", addr)
 
@@ -53,19 +57,31 @@ func transferFile(client *ssh.Client, localPath, remotePath, host, port string) 
 	if err != nil {
 		return fmt.Errorf("failed to start SFTP session: %w", err)
 	}
-	defer sftpClient.Close()
+	defer func() {
+		if err := sftpClient.Close(); err != nil {
+			logger.GetLogger().Warnf("failed to close sftp client: %v", err)
+		}
+	}()
 
 	localFile, err := os.Open(localPath)
 	if err != nil {
 		return fmt.Errorf("failed to open local file: %w", err)
 	}
-	defer localFile.Close()
+	defer func() {
+		if err := localFile.Close(); err != nil {
+			logger.GetLogger().Warnf("failed to close local file: %v", err)
+		}
+	}()
 
 	remoteFile, err := sftpClient.Create(remotePath)
 	if err != nil {
 		return fmt.Errorf("failed to create remote file: %w", err)
 	}
-	defer remoteFile.Close()
+	defer func() {
+		if err := remoteFile.Close(); err != nil {
+			logger.GetLogger().Warnf("failed to close remote file: %v", err)
+		}
+	}()
 
 	content, err := io.ReadAll(localFile)
 	if err != nil {

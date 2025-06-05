@@ -159,17 +159,23 @@ func (s *Service) runTask(
 	executor, ok := s.executors[task.Class]
 	if !ok {
 		msg := fmt.Sprintf("No executor registered for class type: %s", task.Class)
-		s.processStore.AppendProcessLog(ctx, processID, msg)
+		if err := s.processStore.AppendProcessLog(ctx, processID, msg); err != nil {
+			return fmt.Errorf("failed to append to process log: %w", err)
+		}
 		return errors.New(msg)
 	}
 
 	if err := executor.Run(ctx, task); err != nil {
 		msg := fmt.Sprintf("Failed to run task %s: %v", task.Name, err)
-		s.processStore.AppendProcessLog(ctx, processID, msg)
+		if err := s.processStore.AppendProcessLog(ctx, processID, msg); err != nil {
+			return fmt.Errorf("failed to append to process log: %w", err)
+		}
 		return fmt.Errorf("executor error: %w", err)
 	}
 
-	s.processStore.AppendProcessLog(ctx, processID, fmt.Sprintf("Task %s completed", task.Name))
+	if err := s.processStore.AppendProcessLog(ctx, processID, fmt.Sprintf("Task %s completed", task.Name)); err != nil {
+		return fmt.Errorf("failed to append to process log: %w", err)
+	}
 
 	statusMu.Lock()
 	(*taskStatus)[task.Name] = true

@@ -34,7 +34,11 @@ func (se *SSHCmdExecutor) Run(ctx context.Context, task model.Task) error {
 	if err != nil {
 		return fmt.Errorf("failed to dial SSH: %w", err)
 	}
-	defer client.Close()
+	defer func() {
+		if err := client.Close(); err != nil {
+			logger.GetLogger().Warnf("failed to close SSH client: %v", err)
+		}
+	}()
 
 	logger.GetLogger().Infof("Executing SSH command on %s: %q", addr, command)
 
@@ -51,7 +55,11 @@ func runCommand(ctx context.Context, client *ssh.Client, taskName, command strin
 	if err != nil {
 		return fmt.Errorf("failed to create SSH session: %w", err)
 	}
-	defer session.Close()
+	defer func() {
+		if err := session.Close(); err != nil {
+			logger.GetLogger().Warnf("failed to close session: %v", err)
+		}
+	}()
 
 	var stdoutBuf, stderrBuf bytes.Buffer
 	session.Stdout = &stdoutBuf
