@@ -36,7 +36,7 @@ func Process(
 		taskHandlers := map[model.ClassType]service.Executor{
 			model.LocalCmd: executor.NewLocalCmdService(),
 			model.SshCmd:   executor.NewSSHCmdExecutor(),
-			model.ScpCmd:   executor.NewLocalCmdService(),
+			model.ScpCmd:   executor.NewSCPCmdExecutor(),
 		}
 
 		processHandlerSvc := service.NewService(messageStore, processStore, taskHandlers)

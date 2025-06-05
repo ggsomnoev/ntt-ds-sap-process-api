@@ -1,0 +1,24 @@
+name: uniqueSCPProcess
+
+params:
+  - name: host
+    mandatory: true
+  - name: user
+    mandatory: true
+  - name: password
+    mandatory: true
+  - name: localPath
+    mandatory: true
+  - name: remotePath
+    mandatory: true
+
+tasks:
+  - name: scp_task
+    class: scpCmd
+    parameters:
+      host: "{{.host}}"
+      port: "{{.port}}"
+      user: "{{.user}}"
+      password: "{{.password}}"
+      localPath: "{{.localPath}}"
+      remotePath: "{{.remotePath}}"
