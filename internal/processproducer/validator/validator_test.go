@@ -17,103 +17,206 @@ var _ = Describe("ProcessValidator", func() {
 
 	BeforeEach(func() {
 		validatorSvc = validator.NewProcessValidator()
-		proc = model.ProcessDefinition{
-			Name: "valid-process",
-			Params: []model.Param{
-				{Name: "param1", Mandatory: true},
-			},
-			Tasks: []model.Task{
-				{Name: "task1", Class: "some.class", WaitFor: nil},
-				{Name: "task2", Class: "other.class", WaitFor: []string{"task1"}},
-			},
-		}
 	})
 
-	JustBeforeEach(func() {
-		err = validatorSvc.Validate(proc)
-	})
-
-	It("succeeds", func() {
-		Expect(err).NotTo(HaveOccurred())
-	})
-
-	When("process name is empty", func() {
+	Describe("Validate", func() {
 		BeforeEach(func() {
-			proc.Name = " "
+			proc = model.ProcessDefinition{
+				Name: "valid-process",
+				Params: []model.Param{
+					{Name: "param1", Mandatory: true},
+				},
+				Tasks: []model.Task{
+					{Name: "task1", Class: "some.class", WaitFor: nil},
+					{Name: "task2", Class: "other.class", WaitFor: []string{"task1"}},
+				},
+			}
 		})
 
-		It("returns an error", func() {
-			Expect(err).To(MatchError("process name must not be empty"))
+		JustBeforeEach(func() {
+			err = validatorSvc.Validate(proc)
+		})
+
+		It("succeeds", func() {
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		When("process name is empty", func() {
+			BeforeEach(func() {
+				proc.Name = " "
+			})
+
+			It("returns an error", func() {
+				Expect(err).To(MatchError("process name must not be empty"))
+			})
+		})
+
+		When("a task name is empty", func() {
+			BeforeEach(func() {
+				proc.Tasks[0].Name = " "
+			})
+
+			It("returns an error", func() {
+				Expect(err).To(MatchError("task name must not be empty"))
+			})
+		})
+
+		When("a task class is empty", func() {
+			BeforeEach(func() {
+				proc.Tasks[0].Class = " "
+			})
+
+			It("returns an error", func() {
+				Expect(err).To(MatchError("task 'task1' class must not be empty"))
+			})
+		})
+
+		When("duplicate task names exist", func() {
+			BeforeEach(func() {
+				proc.Tasks = append(proc.Tasks, model.Task{Name: "task1", Class: "dup.class"})
+			})
+
+			It("returns an error", func() {
+				Expect(err).To(MatchError("duplicate task name found: task1"))
+			})
+		})
+
+		When("a task waits for itself", func() {
+			BeforeEach(func() {
+				proc.Tasks[0].WaitFor = []string{"task1"}
+			})
+
+			It("returns an error", func() {
+				Expect(err).To(MatchError("task 'task1' cannot wait for itself"))
+			})
+		})
+
+		When("a param name is empty", func() {
+			BeforeEach(func() {
+				proc.Params[0].Name = " "
+			})
+
+			It("returns an error", func() {
+				Expect(err).To(MatchError("param name must not be empty"))
+			})
+		})
+
+		When("duplicate param names exist", func() {
+			BeforeEach(func() {
+				proc.Params = append(proc.Params, model.Param{Name: "param1"})
+			})
+
+			It("returns an error", func() {
+				Expect(err).To(MatchError("duplicate param name found: param1"))
+			})
+		})
+
+		When("a task waits for an unknown task", func() {
+			BeforeEach(func() {
+				proc.Tasks[1].WaitFor = []string{"nonexistent"}
+			})
+
+			It("returns an error", func() {
+				Expect(err).To(MatchError("task 'task2' waits for unknown task 'nonexistent'"))
+			})
 		})
 	})
 
-	When("a task name is empty", func() {
+	Describe("ValidateMandatoryParams", func() {
+		var params map[string]string
+
 		BeforeEach(func() {
-			proc.Tasks[0].Name = " "
+			proc = model.ProcessDefinition{
+				Name: "ssh-process",
+				Params: []model.Param{
+					{Name: "host", Mandatory: true},
+					{Name: "port", Mandatory: true},
+					{Name: "user", Mandatory: true},
+					{Name: "password", Mandatory: true},
+					{Name: "optional1", Mandatory: false},
+				},
+			}
 		})
 
-		It("returns an error", func() {
-			Expect(err).To(MatchError("task name must not be empty"))
-		})
-	})
-
-	When("a task class is empty", func() {
-		BeforeEach(func() {
-			proc.Tasks[0].Class = " "
+		JustBeforeEach(func() {
+			err = validatorSvc.ValidateMandatoryParams(proc, params)
 		})
 
-		It("returns an error", func() {
-			Expect(err).To(MatchError("task 'task1' class must not be empty"))
-		})
-	})
+		When("all mandatory parameters are provided", func() {
+			BeforeEach(func() {
+				params = map[string]string{
+					"host":     "example.com",
+					"port":     "22",
+					"user":     "admin",
+					"password": "secret",
+				}
+			})
 
-	When("duplicate task names exist", func() {
-		BeforeEach(func() {
-			proc.Tasks = append(proc.Tasks, model.Task{Name: "task1", Class: "dup.class"})
-		})
-
-		It("returns an error", func() {
-			Expect(err).To(MatchError("duplicate task name found: task1"))
-		})
-	})
-
-	When("a task waits for itself", func() {
-		BeforeEach(func() {
-			proc.Tasks[0].WaitFor = []string{"task1"}
+			It("succeeds", func() {
+				Expect(err).NotTo(HaveOccurred())
+			})
 		})
 
-		It("returns an error", func() {
-			Expect(err).To(MatchError("task 'task1' cannot wait for itself"))
-		})
-	})
+		When("one mandatory parameter is missing", func() {
+			BeforeEach(func() {
+				params = map[string]string{
+					"host": "example.com",
+					"port": "22",
+					"user": "admin",
+					// password is missing
+				}
+			})
 
-	When("a param name is empty", func() {
-		BeforeEach(func() {
-			proc.Params[0].Name = " "
-		})
-
-		It("returns an error", func() {
-			Expect(err).To(MatchError("param name must not be empty"))
-		})
-	})
-
-	When("duplicate param names exist", func() {
-		BeforeEach(func() {
-			proc.Params = append(proc.Params, model.Param{Name: "param1"})
+			It("returns an error mentioning the missing parameter", func() {
+				Expect(err).To(MatchError("missing mandatory parameters: password"))
+			})
 		})
 
-		It("returns an error", func() {
-			Expect(err).To(MatchError("duplicate param name found: param1"))
-		})
-	})
+		When("multiple mandatory parameters are missing", func() {
+			BeforeEach(func() {
+				params = map[string]string{
+					"host": "example.com",
+					// port, user, password are missing
+				}
+			})
 
-	When("a task waits for an unknown task", func() {
-		BeforeEach(func() {
-			proc.Tasks[1].WaitFor = []string{"nonexistent"}
+			It("returns an error listing all missing params", func() {
+				Expect(err).To(MatchError(ContainSubstring("missing mandatory parameters:")))
+				Expect(err.Error()).To(ContainSubstring("port"))
+				Expect(err.Error()).To(ContainSubstring("user"))
+				Expect(err.Error()).To(ContainSubstring("password"))
+			})
 		})
 
-		It("returns an error", func() {
-			Expect(err).To(MatchError("task 'task2' waits for unknown task 'nonexistent'"))
+		When("a mandatory parameter is present but blank", func() {
+			BeforeEach(func() {
+				params = map[string]string{
+					"host":     "example.com",
+					"port":     "22",
+					"user":     "   ", // blank
+					"password": "secret",
+				}
+			})
+
+			It("returns an error about the blank parameter", func() {
+				Expect(err).To(MatchError("missing mandatory parameters: user"))
+			})
+		})
+
+		When("optional parameter is missing", func() {
+			BeforeEach(func() {
+				params = map[string]string{
+					"host":     "example.com",
+					"port":     "22",
+					"user":     "admin",
+					"password": "secret",
+					// optional1 missing
+				}
+			})
+
+			It("still succeeds", func() {
+				Expect(err).NotTo(HaveOccurred())
+			})
 		})
 	})
 })

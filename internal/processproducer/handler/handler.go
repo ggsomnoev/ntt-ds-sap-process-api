@@ -38,6 +38,7 @@ type Publisher interface {
 //counterfeiter:generate . Validator
 type Validator interface {
 	Validate(model.ProcessDefinition) error
+	ValidateMandatoryParams(model.ProcessDefinition, map[string]string) error
 }
 
 func RegisterHandlers(ctx context.Context, srv *echo.Echo, publisher Publisher, reader Reader, store ProcessDefinitionStore, validator Validator) {
@@ -72,6 +73,13 @@ func handleNewProcess(ctx context.Context, publisher Publisher, reader Reader, s
 			})
 		}
 
+		if err := validator.ValidateMandatoryParams(processDef, req.Parameters); err != nil {
+			return c.JSON(http.StatusBadRequest, map[string]string{
+				"message": "Missing mandatory parameters",
+				"error":   err.Error(),
+			})
+		}
+
 		tasks, err := reader.ApplyTemplatingToTasks(processDef.Tasks, req.Parameters)
 		if err != nil {
 			return c.JSON(http.StatusBadRequest, map[string]string{
@@ -83,7 +91,10 @@ func handleNewProcess(ctx context.Context, publisher Publisher, reader Reader, s
 		processDef.Tasks = tasks
 
 		if err := validator.Validate(processDef); err != nil {
-			return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
+			return c.JSON(http.StatusBadRequest, map[string]string{
+				"message": "Process validation failed",
+				"error":   err.Error(),
+			})
 		}
 
 		message := model.Message{
@@ -92,7 +103,10 @@ func handleNewProcess(ctx context.Context, publisher Publisher, reader Reader, s
 		}
 
 		if err := publisher.Publish(ctx, message); err != nil {
-			return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+			return c.JSON(http.StatusInternalServerError, map[string]string{
+				"message": "Process publishing failed",
+				"error":   err.Error(),
+			})
 		}
 
 		return c.JSON(http.StatusOK, map[string]interface{}{

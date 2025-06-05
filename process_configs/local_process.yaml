@@ -1,10 +1,4 @@
-name: uniqueProcessName
-
-params:
-  - name: parameterName
-    mandatory: true
-    description: description of the parameter
-    defvalue: ""
+name: uniqueLocalProcess
 
 tasks:
   - name: parallel_local_task

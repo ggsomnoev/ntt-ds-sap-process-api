@@ -16,6 +16,7 @@ require (
 	github.com/onsi/gomega v1.36.1
 	github.com/rabbitmq/amqp091-go v1.10.0
 	github.com/sirupsen/logrus v1.9.3
+	golang.org/x/crypto v0.38.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -159,7 +160,6 @@ require (
 	go.opentelemetry.io/otel/metric v1.29.0 // indirect
 	go.opentelemetry.io/otel/trace v1.29.0 // indirect
 	go.uber.org/atomic v1.7.0 // indirect
-	golang.org/x/crypto v0.38.0 // indirect
 	golang.org/x/mod v0.22.0 // indirect
 	golang.org/x/net v0.40.0 // indirect
 	golang.org/x/oauth2 v0.18.0 // indirect

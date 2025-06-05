@@ -60,3 +60,20 @@ func (pv *ProcessValidator) Validate(proc model.ProcessDefinition) error {
 
 	return nil
 }
+
+func (v *ProcessValidator) ValidateMandatoryParams(def model.ProcessDefinition, userParams map[string]string) error {
+	var missing []string
+
+	for _, param := range def.Params {
+		if param.Mandatory {
+			if val, ok := userParams[param.Name]; !ok || strings.TrimSpace(val) == "" {
+				missing = append(missing, param.Name)
+			}
+		}
+	}
+
+	if len(missing) > 0 {
+		return fmt.Errorf("missing mandatory parameters: %s", strings.Join(missing, ", "))
+	}
+	return nil
+}

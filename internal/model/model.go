@@ -10,8 +10,8 @@ import (
 )
 
 type Message struct {
-	UUID uuid.UUID `json:"uuid"`
-	ProcessDefinition
+	UUID              uuid.UUID         `json:"uuid"`
+	ProcessDefinition ProcessDefinition `json:"process_definition"`
 }
 
 type ProcessDefinition struct {

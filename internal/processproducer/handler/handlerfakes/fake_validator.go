@@ -20,6 +20,18 @@ type FakeValidator struct {
 	validateReturnsOnCall map[int]struct {
 		result1 error
 	}
+	ValidateMandatoryParamsStub        func(model.ProcessDefinition, map[string]string) error
+	validateMandatoryParamsMutex       sync.RWMutex
+	validateMandatoryParamsArgsForCall []struct {
+		arg1 model.ProcessDefinition
+		arg2 map[string]string
+	}
+	validateMandatoryParamsReturns struct {
+		result1 error
+	}
+	validateMandatoryParamsReturnsOnCall map[int]struct {
+		result1 error
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
@@ -85,11 +97,75 @@ func (fake *FakeValidator) ValidateReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
+func (fake *FakeValidator) ValidateMandatoryParams(arg1 model.ProcessDefinition, arg2 map[string]string) error {
+	fake.validateMandatoryParamsMutex.Lock()
+	ret, specificReturn := fake.validateMandatoryParamsReturnsOnCall[len(fake.validateMandatoryParamsArgsForCall)]
+	fake.validateMandatoryParamsArgsForCall = append(fake.validateMandatoryParamsArgsForCall, struct {
+		arg1 model.ProcessDefinition
+		arg2 map[string]string
+	}{arg1, arg2})
+	stub := fake.ValidateMandatoryParamsStub
+	fakeReturns := fake.validateMandatoryParamsReturns
+	fake.recordInvocation("ValidateMandatoryParams", []interface{}{arg1, arg2})
+	fake.validateMandatoryParamsMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *FakeValidator) ValidateMandatoryParamsCallCount() int {
+	fake.validateMandatoryParamsMutex.RLock()
+	defer fake.validateMandatoryParamsMutex.RUnlock()
+	return len(fake.validateMandatoryParamsArgsForCall)
+}
+
+func (fake *FakeValidator) ValidateMandatoryParamsCalls(stub func(model.ProcessDefinition, map[string]string) error) {
+	fake.validateMandatoryParamsMutex.Lock()
+	defer fake.validateMandatoryParamsMutex.Unlock()
+	fake.ValidateMandatoryParamsStub = stub
+}
+
+func (fake *FakeValidator) ValidateMandatoryParamsArgsForCall(i int) (model.ProcessDefinition, map[string]string) {
+	fake.validateMandatoryParamsMutex.RLock()
+	defer fake.validateMandatoryParamsMutex.RUnlock()
+	argsForCall := fake.validateMandatoryParamsArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *FakeValidator) ValidateMandatoryParamsReturns(result1 error) {
+	fake.validateMandatoryParamsMutex.Lock()
+	defer fake.validateMandatoryParamsMutex.Unlock()
+	fake.ValidateMandatoryParamsStub = nil
+	fake.validateMandatoryParamsReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeValidator) ValidateMandatoryParamsReturnsOnCall(i int, result1 error) {
+	fake.validateMandatoryParamsMutex.Lock()
+	defer fake.validateMandatoryParamsMutex.Unlock()
+	fake.ValidateMandatoryParamsStub = nil
+	if fake.validateMandatoryParamsReturnsOnCall == nil {
+		fake.validateMandatoryParamsReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.validateMandatoryParamsReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
+}
+
 func (fake *FakeValidator) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
 	fake.validateMutex.RLock()
 	defer fake.validateMutex.RUnlock()
+	fake.validateMandatoryParamsMutex.RLock()
+	defer fake.validateMandatoryParamsMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

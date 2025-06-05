@@ -2,7 +2,9 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/ggsomnoev/ntt-ds-sap-process-api/internal/logger"
@@ -55,7 +57,7 @@ func (s *Service) Run(ctx context.Context, message model.Message) error {
 			return fmt.Errorf("failed to check message: %w", err)
 		}
 		if exists {
-			logger.GetLogger().Infof("Skipping already processed UUID: %s", message.UUID)
+			logger.GetLogger().Infof("Skipping already processed process with UUID: %s", message.UUID)
 			return nil
 		}
 
@@ -92,40 +94,86 @@ func (s *Service) runProcessDefinition(ctx context.Context, def model.ProcessDef
 		return fmt.Errorf("failed to insert process: %w", err)
 	}
 
-	taskStatus := make(map[string]bool)
+	var (
+		wg     sync.WaitGroup
+		mu     sync.Mutex
+		errMsg error
+
+		taskStatus = make(map[string]bool)
+		statusMu   sync.Mutex
+	)
 
 	for _, task := range def.Tasks {
-		for _, dep := range task.WaitFor {
-			if !taskStatus[dep] {
-				msg := fmt.Sprintf("Task %s cannot run before dependency %s", task.Name, dep)
-				logger.GetLogger().Warnf(msg)
-				s.processStore.AppendProcessLog(ctx, processID, msg)
-				return nil
+		wg.Add(1)
+		go func(t model.Task) {
+			defer wg.Done()
+			if err := s.runTask(ctx, processID, task, &taskStatus, &statusMu); err != nil {
+				mu.Lock()
+				if errMsg == nil {
+					errMsg = err
+				}
+				mu.Unlock()
 			}
-		}
-
-		executor, ok := s.executors[task.Class]
-		if !ok {
-			msg := fmt.Sprintf("No executor registered for class type: %s", task.Class)
-			s.processStore.AppendProcessLog(ctx, processID, msg)
-			return fmt.Errorf(msg)
-		}
-
-		if err := executor.Run(ctx, task); err != nil {
-			msg := fmt.Sprintf("Failed to run task %s: %v", task.Name, err)
-			s.processStore.AppendProcessLog(ctx, processID, msg)
-			return fmt.Errorf("executor error: %w", err)
-		}
-
-		s.processStore.AppendProcessLog(ctx, processID, fmt.Sprintf("Task %s completed", task.Name))
-		taskStatus[task.Name] = true
+		}(task)
 	}
 
-	process.Status = model.StatusCompleted
+	wg.Wait()
 
-	if err := s.processStore.UpdateProcessStatus(ctx, process.ID, process.Status); err != nil {
+	if errMsg != nil {
+		_ = s.processStore.UpdateProcessStatus(ctx, processID, model.StatusFailed)
+		return fmt.Errorf("failed task: %w", errMsg)
+	}
+
+	if err := s.processStore.UpdateProcessStatus(ctx, processID, model.StatusCompleted); err != nil {
 		return fmt.Errorf("failed to update process status: %w", err)
 	}
+
+	return nil
+}
+
+func (s *Service) runTask(
+	ctx context.Context,
+	processID uuid.UUID,
+	task model.Task,
+	taskStatus *map[string]bool,
+	statusMu *sync.Mutex,
+) error {
+	// Wait for all dependencies
+	for {
+		statusMu.Lock()
+		allDepsDone := true
+		for _, dep := range task.WaitFor {
+			if !(*taskStatus)[dep] {
+				allDepsDone = false
+				break
+			}
+		}
+		statusMu.Unlock()
+
+		if allDepsDone {
+			break
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+
+	executor, ok := s.executors[task.Class]
+	if !ok {
+		msg := fmt.Sprintf("No executor registered for class type: %s", task.Class)
+		s.processStore.AppendProcessLog(ctx, processID, msg)
+		return errors.New(msg)
+	}
+
+	if err := executor.Run(ctx, task); err != nil {
+		msg := fmt.Sprintf("Failed to run task %s: %v", task.Name, err)
+		s.processStore.AppendProcessLog(ctx, processID, msg)
+		return fmt.Errorf("executor error: %w", err)
+	}
+
+	s.processStore.AppendProcessLog(ctx, processID, fmt.Sprintf("Task %s completed", task.Name))
+
+	statusMu.Lock()
+	(*taskStatus)[task.Name] = true
+	statusMu.Unlock()
 
 	return nil
 }

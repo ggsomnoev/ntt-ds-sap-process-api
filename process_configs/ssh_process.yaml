@@ -1,17 +1,37 @@
 name: uniqueSSHProcess
 
 params:
-  - name: parameterName
+  - name: host
     mandatory: true
-    description: description of the parameter
+    description: SSH host
+    defvalue: ""
+
+  - name: port
+    mandatory: false
+    description: SSH port (defaults to 22 if not specified)
+    defvalue: "22"
+
+  - name: user
+    mandatory: true
+    description: SSH username
+    defvalue: ""
+
+  - name: password
+    mandatory: true
+    description: SSH password
+    defvalue: ""
+
+  - name: value
+    mandatory: true
+    description: The command to run remotely
     defvalue: ""
 
 tasks:
   - name: ssh_task
     class: sshCmd
     parameters:
-      host: "{{.host}}"
-      port: "{{.port}}"          
-      user: "{{.user}}"
-      password: "{{.password}}" # work with public/private keys in env diff than local
+      ssh_host: "{{.host}}"
+      ssh_port: "{{.port}}"
+      ssh_user: "{{.user}}"
+      ssh_password: "{{.password}}"
       command: "{{.value}}"

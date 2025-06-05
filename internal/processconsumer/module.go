@@ -35,7 +35,7 @@ func Process(
 
 		taskHandlers := map[model.ClassType]service.Executor{
 			model.LocalCmd: executor.NewLocalCmdService(),
-			model.SshCmd:   executor.NewLocalCmdService(),
+			model.SshCmd:   executor.NewSSHCmdExecutor(),
 			model.ScpCmd:   executor.NewLocalCmdService(),
 		}
 
