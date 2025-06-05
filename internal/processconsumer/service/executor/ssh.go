@@ -4,11 +4,10 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"strings"
-	"time"
 
 	"github.com/ggsomnoev/ntt-ds-sap-process-api/internal/logger"
 	"github.com/ggsomnoev/ntt-ds-sap-process-api/internal/model"
+	"github.com/ggsomnoev/ntt-ds-sap-process-api/internal/processconsumer/service/executor/sshutil"
 
 	"golang.org/x/crypto/ssh"
 )
@@ -20,41 +19,34 @@ func NewSSHCmdExecutor() *SSHCmdExecutor {
 }
 
 func (se *SSHCmdExecutor) Run(ctx context.Context, task model.Task) error {
-	cmdStr, ok := task.Parameters["command"]
-	if !ok || strings.TrimSpace(cmdStr) == "" {
+	command := task.Parameters["command"]
+	if command == "" {
 		return fmt.Errorf("missing 'command' parameter in task %q", task.Name)
 	}
 
-	host := task.Parameters["ssh_host"]
-	user := task.Parameters["ssh_user"]
-	password := task.Parameters["ssh_password"]
-	port := task.Parameters["ssh_port"]
-	if port == "" {
-		port = "22"
+	connCfg, err := sshutil.BuildConnectionConfig(task.Parameters)
+	if err != nil {
+		return fmt.Errorf("failed to build SSH config: %w", err)
 	}
 
-	if host == "" || user == "" || password == "" {
-		return fmt.Errorf("missing SSH credentials in task %q", task.Name)
-	}
-
-	config := &ssh.ClientConfig{
-		User: user,
-		Auth: []ssh.AuthMethod{
-			ssh.Password(password),
-		},
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(), // For local testing it is okay!
-		Timeout:         10 * time.Second,
-	}
-
-	addr := fmt.Sprintf("%s:%s", host, port)
-	logger.GetLogger().Infof("Executing SSH command on %s: %q", addr, cmdStr)
-
-	client, err := ssh.Dial("tcp", addr, config)
+	addr := fmt.Sprintf("%s:%s", connCfg.Host, connCfg.Port)
+	client, err := ssh.Dial("tcp", addr, connCfg.ClientConfig)
 	if err != nil {
 		return fmt.Errorf("failed to dial SSH: %w", err)
 	}
 	defer client.Close()
 
+	logger.GetLogger().Infof("Executing SSH command on %s: %q", addr, command)
+
+	if err := runCommand(ctx, client, task.Name, command); err != nil {
+		return err
+	}
+
+	logger.GetLogger().Infof("SSH command for task %q succeeded", task.Name)
+	return nil
+}
+
+func runCommand(ctx context.Context, client *ssh.Client, taskName, command string) error {
 	session, err := client.NewSession()
 	if err != nil {
 		return fmt.Errorf("failed to create SSH session: %w", err)
@@ -67,7 +59,7 @@ func (se *SSHCmdExecutor) Run(ctx context.Context, task model.Task) error {
 
 	done := make(chan error, 1)
 	go func() {
-		done <- session.Run(cmdStr)
+		done <- session.Run(command)
 	}()
 
 	select {
@@ -77,13 +69,15 @@ func (se *SSHCmdExecutor) Run(ctx context.Context, task model.Task) error {
 	case err = <-done:
 	}
 
-	output := stdoutBuf.String()
-	errOutput := stderrBuf.String()
+	stdout := stdoutBuf.String()
+	stderr := stderrBuf.String()
 
 	if err != nil {
-		return fmt.Errorf("SSH command failed for task %q: %w. Stderr: %s", task.Name, err, errOutput)
+		return fmt.Errorf("SSH command failed for task %q: %w. Stderr: %s", taskName, err, stderr)
 	}
 
-	logger.GetLogger().Infof("SSH command for task %q succeeded. Output: %s", task.Name, output)
+	if stdout != "" {
+		logger.GetLogger().Infof("Output for task %q:\n%s", taskName, stdout)
+	}
 	return nil
 }

@@ -12,7 +12,7 @@ import (
 	"github.com/google/uuid"
 )
 
-//go:generate counterfeiter . ProcessStore
+//counterfeiter:generate . ProcessStore
 type ProcessStore interface {
 	InsertProcess(context.Context, model.ProcessRun) error
 	AppendProcessLog(context.Context, uuid.UUID, string) error

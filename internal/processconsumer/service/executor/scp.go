@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"time"
 
 	"github.com/ggsomnoev/ntt-ds-sap-process-api/internal/logger"
 	"github.com/ggsomnoev/ntt-ds-sap-process-api/internal/model"
+	"github.com/ggsomnoev/ntt-ds-sap-process-api/internal/processconsumer/service/executor/sshutil"
 	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
 )
@@ -20,60 +20,46 @@ func NewSCPCmdExecutor() *SCPCmdExecutor {
 }
 
 func (e *SCPCmdExecutor) Run(ctx context.Context, task model.Task) error {
-	host := task.Parameters["host"]
-	port := task.Parameters["port"]
-	user := task.Parameters["user"]
-	password := task.Parameters["password"]
-	keyPath := task.Parameters["keyPath"]
-	localPath := task.Parameters["localPath"]
-	remotePath := task.Parameters["remotePath"]
-
-	if host == "" || port == "" || user == "" || localPath == "" || remotePath == "" {
-		return fmt.Errorf("scpCmd missing one or more required parameters")
+	local := task.Parameters["localPath"]
+	remote := task.Parameters["remotePath"]
+	if local == "" || remote == "" {
+		return fmt.Errorf("missing 'localPath' or 'remotePath' in task %q", task.Name)
 	}
 
-	var auth ssh.AuthMethod
-	if keyPath != "" {
-		key, err := os.ReadFile(keyPath)
-		if err != nil {
-			return fmt.Errorf("failed to read private key: %w", err)
-		}
-		signer, err := ssh.ParsePrivateKey(key)
-		if err != nil {
-			return fmt.Errorf("failed to parse private key: %w", err)
-		}
-		auth = ssh.PublicKeys(signer)
-	} else if password != "" {
-		auth = ssh.Password(password)
-	} else {
-		return fmt.Errorf("either password or keyPath must be provided")
+	connCfg, err := sshutil.BuildConnectionConfig(task.Parameters)
+	if err != nil {
+		return err
 	}
 
-	config := &ssh.ClientConfig{
-		User:            user,
-		Auth:            []ssh.AuthMethod{auth},
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(), // For local testing it is okay!
-		Timeout:         10 * time.Second,
-	}
-
-	addr := fmt.Sprintf("%s:%s", host, port)
-	sshClient, err := ssh.Dial("tcp", addr, config)
+	addr := fmt.Sprintf("%s:%s", connCfg.Host, connCfg.Port)
+	client, err := ssh.Dial("tcp", addr, connCfg.ClientConfig)
 	if err != nil {
 		return fmt.Errorf("failed to dial SSH: %w", err)
 	}
-	defer sshClient.Close()
+	defer client.Close()
 
-	sftpClient, err := sftp.NewClient(sshClient)
+	logger.GetLogger().Infof("About to transfer file to %s...", addr)
+
+	if err := transferFile(client, local, remote, connCfg.Host, connCfg.Port); err != nil {
+		return err
+	}
+
+	logger.GetLogger().Infof("Remote file copy for task %q succeeded", task.Name)
+	return nil
+}
+
+func transferFile(client *ssh.Client, localPath, remotePath, host, port string) error {
+	sftpClient, err := sftp.NewClient(client)
 	if err != nil {
 		return fmt.Errorf("failed to start SFTP session: %w", err)
 	}
 	defer sftpClient.Close()
 
-	file, err := os.Open(localPath)
+	localFile, err := os.Open(localPath)
 	if err != nil {
 		return fmt.Errorf("failed to open local file: %w", err)
 	}
-	defer file.Close()
+	defer localFile.Close()
 
 	remoteFile, err := sftpClient.Create(remotePath)
 	if err != nil {
@@ -81,13 +67,12 @@ func (e *SCPCmdExecutor) Run(ctx context.Context, task model.Task) error {
 	}
 	defer remoteFile.Close()
 
-	bytesWritten, err := io.ReadAll(file)
+	content, err := io.ReadAll(localFile)
 	if err != nil {
 		return fmt.Errorf("failed to read local file: %w", err)
 	}
 
-	_, err = remoteFile.Write(bytesWritten)
-	if err != nil {
+	if _, err := remoteFile.Write(content); err != nil {
 		return fmt.Errorf("failed to write to remote file: %w", err)
 	}
 
