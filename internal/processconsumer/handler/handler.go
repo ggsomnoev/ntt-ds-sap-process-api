@@ -62,11 +62,12 @@ func handleStopProcess(ctx context.Context, store ProcessStore) echo.HandlerFunc
 			return echo.NewHTTPError(http.StatusBadRequest, "Invalid process ID")
 		}
 
+		// Updates process status without checking if the process is currently running. For simplicity.
 		if err := store.UpdateProcessStatus(ctx, id, model.StatusStopped); err != nil {
 			return echo.NewHTTPError(http.StatusInternalServerError, "Failed to stop process")
 		}
 		return c.JSON(http.StatusOK, map[string]interface{}{
-			"message": fmt.Sprintf("process with id - %d - successfully stopped!", id),
+			"message": fmt.Sprintf("process with id - %s - successfully stopped!", id.String()),
 		})
 	}
 }

@@ -65,6 +65,7 @@ func (s *ProcessDBStore) GetProcessByID(ctx context.Context, id uuid.UUID) (mode
 	return run, nil
 }
 
+// Currenly lists all process, not only with status "running". The goal here is to have some processes to list.
 func (s *ProcessDBStore) ListRunningProcesses(ctx context.Context) ([]model.ProcessRun, error) {
 	query := fmt.Sprintf(`
 		SELECT id, definition, status, started_at, ended_at

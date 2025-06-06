@@ -31,7 +31,7 @@ func Load() (*Config, error) {
 	return &Config{
 		AppEnv:            getEnv("APP_ENV", "local"),
 		APIPort:           getEnv("API_PORT", "8080"),
-		ProcessCfgDir:     getEnv("PROCESS_CFG_DIR", ""),
+		ProcessCfgDir:     getEnv("PROCESS_CFG_DIR", "/app/process_configs"),
 		DBConnectionURL:   getEnv("DB_CONNECTION_URL", "postgres://user:pass@processdb:5432/processdb"),
 		DBMaxConnLifetime: getDuration("DB_MAX_CONN_LIFETIME", 30*time.Minute),
 		DBMaxConnIdleTime: getDuration("DB_MAX_CONN_IDLE_TIME", 5*time.Minute),
