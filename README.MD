@@ -13,7 +13,7 @@ This app is a tiny demonstration that shows how to manage and run process comman
   * used for tracking.
   * logs and states can be retrieved later through the API.
 * Each command must:
-  - Specify a **process name** that exists in the **configured process definitions**. This can be specified in the '.env' file. The `process_configs` project directory will be used by default.
+  - Specify a **process name** that exists in the **configured process definitions**. The config location can be specified in the '.env' file. If not the `process_configs` project directory will be used by default.
   - Include all **required parameters** expected by that process
 
 ## Architecture
