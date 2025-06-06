@@ -8,7 +8,7 @@ This app is a tiny demonstration that shows how to manage and run process comman
   - Copy files to a remote machine using SFTP 
 * Pushes every request onto a **RabbitMQ** queue.
 * Retries messages on failures couple of times. 
-* **Consumer/s** processes the queue and performs the required actions based on the command type(localCmd, sshCmd, scpCmd).
+* **Consumer/s** processes the queue and performs the required actions based on the command type (localCmd, sshCmd, scpCmd).
 * Persists every processed/ing message in PostgreSQL:
   * used for tracking.
   * logs and states can be retrieved later through the API.
