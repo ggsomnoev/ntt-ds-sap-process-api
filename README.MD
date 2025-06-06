@@ -14,6 +14,7 @@ This app is a tiny demonstration that shows how to manage and run process comman
   * logs and states can be retrieved later through the API.
 * Each command must:
   - Specify a **process name** that exists in the **configured process definitions**. The config location can be specified in the '.env' file. If not the `process_configs` project directory will be used by default.
+  - The **process loader** periodically maps the content of the specified config location to keep track of available processes.
   - Include all **required parameters** expected by that process
 
 ## Architecture

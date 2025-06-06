@@ -7,9 +7,9 @@ import (
 	"github.com/ggsomnoev/ntt-ds-sap-process-api/internal/healthcheck"
 	"github.com/ggsomnoev/ntt-ds-sap-process-api/internal/healthcheck/service"
 	"github.com/ggsomnoev/ntt-ds-sap-process-api/internal/healthcheck/service/component"
-	"github.com/ggsomnoev/ntt-ds-sap-process-api/internal/processconsumer"
 	"github.com/ggsomnoev/ntt-ds-sap-process-api/internal/lifecycle"
 	"github.com/ggsomnoev/ntt-ds-sap-process-api/internal/pg"
+	consumer "github.com/ggsomnoev/ntt-ds-sap-process-api/internal/processconsumer"
 	"github.com/ggsomnoev/ntt-ds-sap-process-api/internal/rabbitmq"
 	"github.com/ggsomnoev/ntt-ds-sap-process-api/internal/webapi"
 )
@@ -58,7 +58,14 @@ func main() {
 	healthCheckService := service.NewHealthCheckService(rmqConn, dbComp)
 	healthcheck.Process(procSpawnFn, appCtx, srv, healthCheckService)
 
-	webapi.Start(procSpawnFn, srv, cfg.APIPort)
+	var webapiTLS *webapi.TLSConfig
+	if cfg.AppEnv != "local" {
+		webapiTLS = &webapi.TLSConfig{
+			CertFile: cfg.WebAPICertFile,
+			KeyFile:  cfg.WebAPIKeyFile,
+		}
+	}
+	webapi.Start(procSpawnFn, srv, cfg.APIPort, webapiTLS)
 
 	appController.Wait()
 }

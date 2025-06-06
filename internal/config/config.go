@@ -13,6 +13,9 @@ type Config struct {
 	APIPort       string
 	ProcessCfgDir string
 
+	WebAPICertFile string
+	WebAPIKeyFile  string
+
 	DBConnectionURL   string
 	DBMaxConnLifetime time.Duration
 	DBMaxConnIdleTime time.Duration
@@ -32,6 +35,8 @@ func Load() (*Config, error) {
 		AppEnv:            getEnv("APP_ENV", "local"),
 		APIPort:           getEnv("API_PORT", "8080"),
 		ProcessCfgDir:     getEnv("PROCESS_CFG_DIR", "/app/process_configs"),
+		WebAPICertFile:    getEnv("WEBAPI_TLS_CERT_FILE", ""),
+		WebAPIKeyFile:     getEnv("WEBAPI_TLS_KEY_FILE", ""),
 		DBConnectionURL:   getEnv("DB_CONNECTION_URL", "postgres://user:pass@processdb:5432/processdb"),
 		DBMaxConnLifetime: getDuration("DB_MAX_CONN_LIFETIME", 30*time.Minute),
 		DBMaxConnIdleTime: getDuration("DB_MAX_CONN_IDLE_TIME", 5*time.Minute),

@@ -61,7 +61,15 @@ func main() {
 	healthCheckService := service.NewHealthCheckService(rmqConn, dbComp)
 	healthcheck.Process(procSpawnFn, appCtx, srv, healthCheckService)
 
-	webapi.Start(procSpawnFn, srv, cfg.APIPort)
+	var webapiTLS *webapi.TLSConfig
+	if cfg.AppEnv != "local" {
+		webapiTLS = &webapi.TLSConfig{
+			CertFile: cfg.WebAPICertFile,
+			KeyFile:  cfg.WebAPIKeyFile,
+		}
+	}
+
+	webapi.Start(procSpawnFn, srv, cfg.APIPort, webapiTLS)
 
 	appController.Wait()
 }
