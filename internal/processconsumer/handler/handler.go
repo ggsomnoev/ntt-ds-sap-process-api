@@ -11,7 +11,7 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-//go:generate counterfeiter . ProcessStore
+//counterfeiter:generate . ProcessStore
 type ProcessStore interface {
 	ListRunningProcesses(context.Context) ([]model.ProcessRun, error)
 	GetProcessByID(context.Context, uuid.UUID) (model.ProcessRun, error)

@@ -107,7 +107,7 @@ var _ = Describe("Process Handler", func() {
 
 			It("returns 400 with store error", func() {
 				Expect(recorder.Code).To(Equal(http.StatusBadRequest))
-				Expect(recorder.Body.String()).To(ContainSubstring("No such process"))
+				Expect(recorder.Body.String()).To(ContainSubstring("Process definition template not found"))
 			})
 		})
 
@@ -118,7 +118,7 @@ var _ = Describe("Process Handler", func() {
 
 			It("returns 400 with parse error", func() {
 				Expect(recorder.Code).To(Equal(http.StatusBadRequest))
-				Expect(recorder.Body.String()).To(ContainSubstring("Process definition not found"))
+				Expect(recorder.Body.String()).To(ContainSubstring("Could not parse process definition template"))
 			})
 		})
 
